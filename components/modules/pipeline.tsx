@@ -231,7 +231,7 @@ export function PipelineModule() {
 
         {/* MRR + Responsavel */}
         <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1"><DollarSign className="w-3 h-3" />R$ {opp.mrr_fechado.toLocaleString("pt-BR")}</span>
+          <span className="flex items-center gap-1"><DollarSign className="w-3 h-3" />R$ {(opp.estagio === "works_fechado" ? opp.mrr_fechado : opp.mrr_estimado).toLocaleString("pt-BR")}</span>
           <span className="flex items-center gap-1"><User className="w-3 h-3" />{opp.responsavel}</span>
         </div>
 

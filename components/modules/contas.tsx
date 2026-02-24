@@ -25,7 +25,7 @@ import { Building2, Plus, Search, X, Pencil, Trash2, Eye, Download, ArrowUpDown 
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 
-const SEGMENTOS: Segmento[] = ["Indústria", "Serviços", "Varejo", "Saúde", "Outro"]
+const SEGMENTOS: Segmento[] = ["Agroindústria", "Construção e Projetos", "Educação", "Logística", "Manufatura", "Saúde", "Serviços", "Setor Público", "Varejo"]
 const PORTES: Porte[] = ["PME", "Mid-Market", "Enterprise"]
 
 const emptyForm = (): Omit<Account, "id" | "score_total" | "tier" | "onda" | "criado_em" | "atualizado_em"> & { estagio_inicial?: OppStage } => ({
