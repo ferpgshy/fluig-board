@@ -7,11 +7,17 @@ import {
   type Visit,
   type ReportDraft,
   type OppStage,
-  type AxisScore,
+  type ReportStatus,
+  calcScoreTotal,
   calcTier,
   calcOnda,
-  OPP_STAGE_ORDER,
+  canAdvanceStage,
+  isOppActive,
 } from "./models"
+
+type AccountInput = Omit<Account, "id" | "score_total" | "tier" | "onda" | "criado_em" | "atualizado_em">
+type OpportunityInput = Omit<Opportunity, "id" | "criado_em" | "atualizado_em">
+type VisitInput = Omit<Visit, "id" | "criado_em">
 
 interface AppState {
   accounts: Account[]
@@ -19,26 +25,27 @@ interface AppState {
   visits: Visit[]
   reports: ReportDraft[]
 
-  // Account actions
-  addAccount: (data: Omit<Account, "id" | "tier" | "onda" | "created_at" | "updated_at">) => void
-  updateAccount: (id: string, data: Partial<Omit<Account, "id" | "tier" | "onda">>) => void
+  // Account
+  addAccount: (data: AccountInput) => void
+  updateAccount: (id: string, data: Partial<AccountInput>) => void
   deleteAccount: (id: string) => void
 
-  // Opportunity actions
-  addOpportunity: (data: Omit<Opportunity, "id" | "created_at" | "updated_at">) => string | null
-  updateOpportunity: (id: string, data: Partial<Omit<Opportunity, "id">>) => void
-  moveOpportunityStage: (id: string, newStage: OppStage) => boolean
+  // Opportunity
+  addOpportunity: (data: OpportunityInput) => string | null
+  updateOpportunity: (id: string, data: Partial<Omit<Opportunity, "id" | "criado_em">>) => void
+  moveOpportunityStage: (id: string, newStage: OppStage, extra?: { mrr_fechado?: number; motivo_perda?: string }) => boolean
   deleteOpportunity: (id: string) => void
 
-  // Visit actions
-  addVisit: (data: Omit<Visit, "id" | "created_at">) => void
+  // Visit
+  addVisit: (data: VisitInput) => string
+  updateVisit: (id: string, data: Partial<Omit<Visit, "id" | "criado_em">>) => void
 
-  // Report actions
-  addReport: (data: Omit<ReportDraft, "id" | "created_at" | "status">) => string | null
-  updateReport: (id: string, data: Partial<Omit<ReportDraft, "id">>) => void
-  finalizeReport: (id: string) => void
+  // Report
+  addReport: (data: Omit<ReportDraft, "id" | "criado_em" | "atualizado_em" | "status">) => string | null
+  updateReport: (id: string, data: Partial<Omit<ReportDraft, "id" | "criado_em">>) => void
+  advanceReportStatus: (id: string) => void
 
-  // Seed demo data
+  // Seed
   seedDemoData: () => void
 }
 
@@ -50,17 +57,20 @@ export const useStore = create<AppState>()(
       visits: [],
       reports: [],
 
+      // === ACCOUNT ===
       addAccount: (data) => {
         const now = new Date().toISOString()
-        const tier = calcTier(data.score_total)
+        const score_total = calcScoreTotal(data)
+        const tier = calcTier(score_total)
         const onda = calcOnda(tier)
         const account: Account = {
           ...data,
           id: uuid(),
+          score_total,
           tier,
           onda,
-          created_at: now,
-          updated_at: now,
+          criado_em: now,
+          atualizado_em: now,
         }
         set((s) => ({ accounts: [...s.accounts, account] }))
       },
@@ -69,8 +79,11 @@ export const useStore = create<AppState>()(
         set((s) => ({
           accounts: s.accounts.map((a) => {
             if (a.id !== id) return a
-            const updated = { ...a, ...data, updated_at: new Date().toISOString() }
-            if (data.score_total !== undefined) {
+            const updated = { ...a, ...data, atualizado_em: new Date().toISOString() }
+            // Recalculate scores if any score field changed
+            const scoreFields = ["score_potencial", "score_maturidade", "score_dor", "score_risco_churn", "score_acesso"] as const
+            if (scoreFields.some((f) => f in data)) {
+              updated.score_total = calcScoreTotal(updated)
               updated.tier = calcTier(updated.score_total)
               updated.onda = calcOnda(updated.tier)
             }
@@ -88,22 +101,20 @@ export const useStore = create<AppState>()(
         }))
       },
 
+      // === OPPORTUNITY ===
       addOpportunity: (data) => {
         const state = get()
-        const activeOpp = state.opportunities.find(
-          (o) =>
-            o.account_id === data.account_id &&
-            o.stage !== "fechado_ganho" &&
-            o.stage !== "fechado_perdido"
+        const hasActive = state.opportunities.some(
+          (o) => o.account_id === data.account_id && isOppActive(o.estagio)
         )
-        if (activeOpp) return null // 1 oportunidade ativa por conta
+        if (hasActive) return null
 
         const now = new Date().toISOString()
         const opp: Opportunity = {
           ...data,
           id: uuid(),
-          created_at: now,
-          updated_at: now,
+          criado_em: now,
+          atualizado_em: now,
         }
         set((s) => ({ opportunities: [...s.opportunities, opp] }))
         return opp.id
@@ -112,27 +123,35 @@ export const useStore = create<AppState>()(
       updateOpportunity: (id, data) => {
         set((s) => ({
           opportunities: s.opportunities.map((o) =>
-            o.id === id ? { ...o, ...data, updated_at: new Date().toISOString() } : o
+            o.id === id ? { ...o, ...data, atualizado_em: new Date().toISOString() } : o
           ),
         }))
       },
 
-      moveOpportunityStage: (id, newStage) => {
+      moveOpportunityStage: (id, newStage, extra) => {
         const state = get()
         const opp = state.opportunities.find((o) => o.id === id)
         if (!opp) return false
+        if (!canAdvanceStage(opp.estagio, newStage)) return false
 
-        const currentIdx = OPP_STAGE_ORDER.indexOf(opp.stage)
-        const newIdx = OPP_STAGE_ORDER.indexOf(newStage)
+        const now = new Date().toISOString()
+        const updates: Partial<Opportunity> = {
+          estagio: newStage,
+          atualizado_em: now,
+        }
 
-        // Transição linear: só avança ou fecha
-        if (newIdx < currentIdx && newStage !== "fechado_perdido") return false
+        if (newStage === "works_fechado") {
+          updates.mrr_fechado = extra?.mrr_fechado ?? opp.mrr_estimado
+          updates.data_fechamento = now
+        }
+        if (newStage === "perdido") {
+          updates.motivo_perda = extra?.motivo_perda ?? ""
+          updates.data_fechamento = now
+        }
 
         set((s) => ({
           opportunities: s.opportunities.map((o) =>
-            o.id === id
-              ? { ...o, stage: newStage, updated_at: new Date().toISOString() }
-              : o
+            o.id === id ? { ...o, ...updates } : o
           ),
         }))
         return true
@@ -144,30 +163,38 @@ export const useStore = create<AppState>()(
         }))
       },
 
+      // === VISIT ===
       addVisit: (data) => {
         const visit: Visit = {
           ...data,
           id: uuid(),
-          created_at: new Date().toISOString(),
+          criado_em: new Date().toISOString(),
         }
         set((s) => ({ visits: [...s.visits, visit] }))
+        return visit.id
       },
 
+      updateVisit: (id, data) => {
+        set((s) => ({
+          visits: s.visits.map((v) => (v.id === id ? { ...v, ...data } : v)),
+        }))
+      },
+
+      // === REPORT ===
       addReport: (data) => {
         const state = get()
         const existing = state.reports.find(
-          (r) =>
-            r.account_id === data.account_id &&
-            r.opportunity_id === data.opportunity_id &&
-            r.status === "rascunho"
+          (r) => r.visit_id === data.visit_id && r.status !== "Enviado"
         )
-        if (existing) return null // Não sobrescreve existente
+        if (existing) return null
 
+        const now = new Date().toISOString()
         const report: ReportDraft = {
           ...data,
           id: uuid(),
-          created_at: new Date().toISOString(),
-          status: "rascunho",
+          status: "Rascunho",
+          criado_em: now,
+          atualizado_em: now,
         }
         set((s) => ({ reports: [...s.reports, report] }))
         return report.id
@@ -175,68 +202,147 @@ export const useStore = create<AppState>()(
 
       updateReport: (id, data) => {
         set((s) => ({
-          reports: s.reports.map((r) => (r.id === id ? { ...r, ...data } : r)),
-        }))
-      },
-
-      finalizeReport: (id) => {
-        set((s) => ({
           reports: s.reports.map((r) =>
-            r.id === id ? { ...r, status: "finalizado" as const } : r
+            r.id === id ? { ...r, ...data, atualizado_em: new Date().toISOString() } : r
           ),
         }))
       },
 
+      advanceReportStatus: (id) => {
+        const flow: Record<ReportStatus, ReportStatus | null> = {
+          Rascunho: "Revisão",
+          "Revisão": "Enviado",
+          Enviado: null,
+        }
+        set((s) => ({
+          reports: s.reports.map((r) => {
+            if (r.id !== id) return r
+            const next = flow[r.status]
+            if (!next) return r
+            return { ...r, status: next, atualizado_em: new Date().toISOString() }
+          }),
+        }))
+      },
+
+      // === SEED ===
       seedDemoData: () => {
         const state = get()
         if (state.accounts.length > 0) return
 
         const now = new Date().toISOString()
-        const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString()
-        const tenDaysAgo = new Date(Date.now() - 10 * 86400000).toISOString()
-        const twentyDaysAgo = new Date(Date.now() - 20 * 86400000).toISOString()
+        const d = (daysAgo: number) => new Date(Date.now() - daysAgo * 86400000).toISOString()
+        const pastDate = (daysAgo: number) => new Date(Date.now() - daysAgo * 86400000).toISOString().slice(0, 10)
+        const futureDate = (daysAhead: number) => new Date(Date.now() + daysAhead * 86400000).toISOString().slice(0, 10)
 
-        const accounts: Account[] = [
-          { id: uuid(), nome: "TechCorp Brasil", segmento: "Tecnologia", cnpj: "12.345.678/0001-90", responsavel: "Ana Silva", score_total: 92, tier: "A", onda: 1, created_at: twentyDaysAgo, updated_at: now },
-          { id: uuid(), nome: "Indústria Novo Horizonte", segmento: "Indústria", cnpj: "23.456.789/0001-01", responsavel: "Carlos Souza", score_total: 75, tier: "B", onda: 2, created_at: tenDaysAgo, updated_at: now },
-          { id: uuid(), nome: "Varejo Express", segmento: "Varejo", cnpj: "34.567.890/0001-12", responsavel: "Maria Oliveira", score_total: 60, tier: "B", onda: 2, created_at: twoDaysAgo, updated_at: now },
-          { id: uuid(), nome: "Logística Ágil", segmento: "Logística", cnpj: "45.678.901/0001-23", responsavel: "Pedro Lima", score_total: 40, tier: "C", onda: 3, created_at: twentyDaysAgo, updated_at: now },
-          { id: uuid(), nome: "Saúde Mais", segmento: "Saúde", cnpj: "56.789.012/0001-34", responsavel: "Juliana Costa", score_total: 85, tier: "A", onda: 1, created_at: tenDaysAgo, updated_at: now },
-          { id: uuid(), nome: "EduTech Solutions", segmento: "Educação", cnpj: "67.890.123/0001-45", responsavel: "Roberto Almeida", score_total: 30, tier: "C", onda: 3, created_at: twoDaysAgo, updated_at: now },
-        ]
-
-        const opportunities: Opportunity[] = [
-          { id: uuid(), account_id: accounts[0].id, stage: "negociacao", valor_estimado: 250000, probabilidade: 80, notas: "Grande projeto de transformação digital", created_at: tenDaysAgo, updated_at: now },
-          { id: uuid(), account_id: accounts[1].id, stage: "proposta", valor_estimado: 120000, probabilidade: 60, notas: "Automação de processos industriais", created_at: twoDaysAgo, updated_at: now },
-          { id: uuid(), account_id: accounts[2].id, stage: "qualificacao", valor_estimado: 80000, probabilidade: 40, notas: "Sistema de gestão de estoque", created_at: twoDaysAgo, updated_at: now },
-          { id: uuid(), account_id: accounts[3].id, stage: "prospeccao", valor_estimado: 45000, probabilidade: 20, notas: "Consultoria de processos logísticos", created_at: twentyDaysAgo, updated_at: now },
-          { id: uuid(), account_id: accounts[4].id, stage: "fechado_ganho", valor_estimado: 300000, probabilidade: 100, notas: "Plataforma de telemedicina", created_at: twentyDaysAgo, updated_at: now },
-        ]
-
-        const visits: Visit[] = [
-          { id: uuid(), account_id: accounts[0].id, opportunity_id: opportunities[0].id, data: twoDaysAgo, tipo: "presencial", participantes: "Ana Silva, João Mendes", resumo: "Apresentação da proposta técnica e roadmap de implementação.", created_at: twoDaysAgo },
-          { id: uuid(), account_id: accounts[1].id, opportunity_id: opportunities[1].id, data: now, tipo: "remoto", participantes: "Carlos Souza", resumo: "Follow-up sobre requisitos de integração com ERP.", created_at: now },
-          { id: uuid(), account_id: accounts[4].id, opportunity_id: opportunities[4].id, data: tenDaysAgo, tipo: "presencial", participantes: "Juliana Costa, Equipe TI", resumo: "Kickoff do projeto de telemedicina.", created_at: tenDaysAgo },
-        ]
-
-        const reports: ReportDraft[] = [
+        const accs: Account[] = [
           {
-            id: uuid(),
-            account_id: accounts[4].id,
-            opportunity_id: opportunities[4].id,
-            scores: [
-              { axis: "processos", score: 4, observacoes: "Processos bem definidos com margem para automação" },
-              { axis: "automacao", score: 3, observacoes: "Automação parcial em alguns departamentos" },
-              { axis: "integracao", score: 2, observacoes: "Sistemas ainda isolados" },
-              { axis: "governanca", score: 4, observacoes: "Boa governança de TI" },
-            ],
-            recomendacoes: "Foco em integração de sistemas e expansão da automação para áreas administrativas.",
-            created_at: tenDaysAgo,
-            status: "finalizado",
+            id: uuid(), nome: "Metalúrgica Recife S/A", segmento: "Indústria", porte: "Mid-Market",
+            contato_nome: "Ricardo Mendes", contato_cargo: "Diretor de TI", contato_email: "ricardo@metalrecife.com.br", contato_whatsapp: "81999001234",
+            fluig_versao: "1.8.2", fluig_modulos: ["ECM", "BPM", "WCM"],
+            score_potencial: 5, score_maturidade: 4, score_dor: 4, score_risco_churn: 3, score_acesso: 5,
+            score_total: 21, tier: "A", onda: 1, observacoes: "Forte candidato a Works Premium. Sponsor muito engajado.",
+            criado_em: d(30), atualizado_em: d(2),
+          },
+          {
+            id: uuid(), nome: "Hospital São Lucas", segmento: "Saúde", porte: "Enterprise",
+            contato_nome: "Dra. Fernanda Lopes", contato_cargo: "CIO", contato_email: "fernanda@hsl.com.br", contato_whatsapp: "81998007654",
+            fluig_versao: "1.7.4", fluig_modulos: ["ECM", "BPM"],
+            score_potencial: 5, score_maturidade: 3, score_dor: 5, score_risco_churn: 2, score_acesso: 5,
+            score_total: 20, tier: "A", onda: 1, observacoes: "Dores críticas em processos de auditoria e compliance.",
+            criado_em: d(25), atualizado_em: d(1),
+          },
+          {
+            id: uuid(), nome: "Varejo Nordeste Ltda", segmento: "Varejo", porte: "PME",
+            contato_nome: "Paulo Henrique", contato_cargo: "Gerente de Operações", contato_email: "paulo@varejone.com.br", contato_whatsapp: "81997005432",
+            fluig_versao: "1.8.0", fluig_modulos: ["ECM"],
+            score_potencial: 4, score_maturidade: 3, score_dor: 3, score_risco_churn: 2, score_acesso: 3,
+            score_total: 15, tier: "B", onda: 2, observacoes: "Interesse moderado em automação de estoque.",
+            criado_em: d(20), atualizado_em: d(5),
+          },
+          {
+            id: uuid(), nome: "ConsultPE Serviços", segmento: "Serviços", porte: "PME",
+            contato_nome: "Amanda Reis", contato_cargo: "Coordenadora de Projetos", contato_email: "amanda@consultpe.com.br", contato_whatsapp: "81996004321",
+            fluig_versao: "1.6.5", fluig_modulos: ["ECM", "BPM", "WCM", "Social"],
+            score_potencial: 3, score_maturidade: 4, score_dor: 2, score_risco_churn: 1, score_acesso: 4,
+            score_total: 14, tier: "B", onda: 2, observacoes: "Base madura, poucas dores. Oportunidade em integrações.",
+            criado_em: d(15), atualizado_em: d(3),
+          },
+          {
+            id: uuid(), nome: "Logística Express NE", segmento: "Serviços", porte: "PME",
+            contato_nome: "Marcos Vieira", contato_cargo: "Analista de Sistemas", contato_email: "marcos@logisticane.com.br", contato_whatsapp: "81995003210",
+            fluig_versao: "1.5.0", fluig_modulos: ["ECM"],
+            score_potencial: 2, score_maturidade: 1, score_dor: 2, score_risco_churn: 4, score_acesso: 2,
+            score_total: 11, tier: "C", onda: 3, observacoes: "Risco de churn elevado. Sponsor com pouca autonomia.",
+            criado_em: d(10), atualizado_em: d(8),
+          },
+          {
+            id: uuid(), nome: "EduTech Recife", segmento: "Outro", porte: "PME",
+            contato_nome: "Juliana Castro", contato_cargo: "Diretora Administrativa", contato_email: "juliana@edutechrecife.com.br", contato_whatsapp: "81994002109",
+            fluig_versao: "1.7.0", fluig_modulos: ["ECM", "BPM"],
+            score_potencial: 1, score_maturidade: 2, score_dor: 1, score_risco_churn: 3, score_acesso: 1,
+            score_total: 8, tier: "C", onda: 3, observacoes: "Baixo potencial imediato. Manter relacionamento.",
+            criado_em: d(5), atualizado_em: d(5),
           },
         ]
 
-        set({ accounts, opportunities, visits, reports })
+        const opps: Opportunity[] = [
+          {
+            id: uuid(), account_id: accs[0].id, estagio: "negociacao",
+            mrr_estimado: 8500, mrr_fechado: 0, pacote_works: "Premium",
+            data_contato: pastDate(28), data_visita: pastDate(20), data_proposta: pastDate(10), data_fechamento: "",
+            motivo_perda: "", proximo_passo: "Reunião de alinhamento final com diretoria", data_proximo_passo: futureDate(3),
+            responsavel: "Dupla", criado_em: d(28), atualizado_em: d(2),
+          },
+          {
+            id: uuid(), account_id: accs[1].id, estagio: "diagnostico",
+            mrr_estimado: 12000, mrr_fechado: 0, pacote_works: "Avançado",
+            data_contato: pastDate(22), data_visita: pastDate(15), data_proposta: "", data_fechamento: "",
+            motivo_perda: "", proximo_passo: "Consolidar diagnóstico para proposta", data_proximo_passo: futureDate(5),
+            responsavel: "Camila", criado_em: d(22), atualizado_em: d(1),
+          },
+          {
+            id: uuid(), account_id: accs[2].id, estagio: "visita_agendada",
+            mrr_estimado: 3500, mrr_fechado: 0, pacote_works: "Essencial",
+            data_contato: pastDate(18), data_visita: "", data_proposta: "", data_fechamento: "",
+            motivo_perda: "", proximo_passo: "Confirmar visita presencial", data_proximo_passo: pastDate(2),
+            responsavel: "Niésio", criado_em: d(18), atualizado_em: d(10),
+          },
+          {
+            id: uuid(), account_id: accs[3].id, estagio: "contato",
+            mrr_estimado: 4000, mrr_fechado: 0, pacote_works: "Essencial",
+            data_contato: pastDate(12), data_visita: "", data_proposta: "", data_fechamento: "",
+            motivo_perda: "", proximo_passo: "Agendar call de apresentação", data_proximo_passo: futureDate(7),
+            responsavel: "Camila", criado_em: d(12), atualizado_em: d(3),
+          },
+          {
+            id: uuid(), account_id: accs[4].id, estagio: "selecionado",
+            mrr_estimado: 2000, mrr_fechado: 0, pacote_works: "Essencial",
+            data_contato: "", data_visita: "", data_proposta: "", data_fechamento: "",
+            motivo_perda: "", proximo_passo: "", data_proximo_passo: "",
+            responsavel: "Niésio", criado_em: d(8), atualizado_em: d(8),
+          },
+        ]
+
+        const visits: Visit[] = [
+          {
+            id: uuid(), opportunity_id: opps[0].id, account_id: accs[0].id,
+            data_visita: pastDate(20), modalidade: "Presencial", participantes_cliente: "Ricardo Mendes, Ana TI",
+            dx_processos_descritos: "Processos de aprovação de compras e RH com múltiplas etapas manuais.",
+            dx_processos_dores: "Perda de documentos, retrabalho em aprovações, falta de rastreabilidade.",
+            dx_processos_impacto: "Estimados 2 dias de atraso médio por aprovação, custo indireto de R$ 15k/mês.",
+            dx_automacao_nivel: "Básica", dx_automacao_gaps: "Fluxos de aprovação e notificações ainda manuais.",
+            dx_integracao_sistemas: "SAP, RH Senior", dx_integracao_status: "Integração via CSV manual, sem API.",
+            dx_governanca_problemas: "Sem SLA definido, sem dashboards de acompanhamento.",
+            dx_sponsor_engajamento: "Alto",
+            hipotese_works: "Works Premium para automação completa de fluxos com integração SAP.",
+            escopo_preliminar: "Automação de 5 processos core + integração SAP via API + dashboard governança.",
+            objeccoes_levantadas: "Prazo de implantação e necessidade de treinamento da equipe.",
+            proximo_passo_acordado: "Elaborar proposta comercial", data_proximo_passo: futureDate(3),
+            fotos_evidencias: [], criado_em: d(20),
+          },
+        ]
+
+        set({ accounts: accs, opportunities: opps, visits, reports: [] })
       },
     }),
     {
