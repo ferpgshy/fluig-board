@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react"
 import { useStore } from "@/lib/store"
-import { type ReportDraft, type ReportTipo, type ReportStatus } from "@/lib/models"
+import { type ReportDraft, type ReportTipo, type ReportStatus, OPP_STAGE_LABELS } from "@/lib/models"
 import { SectionHeader } from "@/components/fluig/section-header"
 import { TierBadge } from "@/components/fluig/tier-badge"
 import {
@@ -12,6 +12,7 @@ import {
   Send,
   Pencil,
   ChevronRight,
+  FileSpreadsheet,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { format } from "date-fns"
@@ -25,6 +26,8 @@ const STATUS_CONFIG: Record<ReportStatus, { label: string; Icon: LucideIcon; cla
 
 export function RelatorioModule() {
   const accounts = useStore((s) => s.accounts)
+  const opportunities = useStore((s) => s.opportunities)
+  const visits = useStore((s) => s.visits)
   const reports = useStore((s) => s.reports)
   const updateReport = useStore((s) => s.updateReport)
   const advanceReportStatus = useStore((s) => s.advanceReportStatus)
@@ -33,6 +36,116 @@ export function RelatorioModule() {
   const [editForm, setEditForm] = useState<Partial<ReportDraft>>({})
 
   const getAccount = (id: string) => accounts.find((a) => a.id === id)
+  const getVisit = (id: string) => visits.find((v) => v.id === id)
+  const getOpportunity = (accountId: string) => opportunities.find((o) => o.account_id === accountId)
+
+  // === CSV Export Helpers ===
+  function escapeCsv(value: string | number | undefined | null): string {
+    if (value === undefined || value === null) return ""
+    const str = String(value)
+    if (str.includes(",") || str.includes('"') || str.includes("\n") || str.includes("\r")) {
+      return '"' + str.replace(/"/g, '""') + '"'
+    }
+    return str
+  }
+
+  function downloadCsv(filename: string, csvContent: string) {
+    const BOM = "\uFEFF"
+    const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  function handleExportCsvSingle(reportId: string) {
+    const report = reports.find((r) => r.id === reportId)
+    if (!report) return
+    exportReportsToCsv([report])
+  }
+
+  function handleExportCsvAll() {
+    if (reports.length === 0) return
+    exportReportsToCsv(reports)
+  }
+
+  function exportReportsToCsv(reportsToExport: ReportDraft[]) {
+    const headers = [
+      // Relatório
+      "Relatorio ID", "Tipo", "Titulo", "Status", "Contexto Cliente", "Dores Priorizadas",
+      "Impacto Estimado", "Solucao Proposta", "Entregaveis", "Investimento MRR (R$)",
+      "Prazo Implantacao", "Relatorio Criado Em", "Relatorio Atualizado Em",
+      // Conta
+      "Conta", "Segmento", "Porte", "Tier", "Onda",
+      "Contato Nome", "Contato Cargo", "Contato Email", "Contato WhatsApp",
+      "Fluig Versao", "Fluig Modulos",
+      "Score Potencial", "Score Maturidade", "Score Dor", "Score Risco Churn", "Score Acesso", "Score Total",
+      "Observacoes Conta", "Conta Criada Em",
+      // Oportunidade
+      "Estagio Pipeline", "MRR Estimado (R$)", "MRR Fechado (R$)", "Pacote Works",
+      "Responsavel", "Proximo Passo", "Data Proximo Passo", "Motivo Perda",
+      "Data Contato", "Data Visita Opp", "Data Proposta", "Data Fechamento",
+      // Roteiro / Visita
+      "Data Visita Roteiro", "Modalidade", "Participantes Cliente",
+      "Processos Descritos", "Processos Dores", "Processos Impacto",
+      "Automacao Nivel", "Automacao Gaps",
+      "Integracao Sistemas", "Integracao Status",
+      "Governanca Problemas", "Sponsor Engajamento",
+      "Hipotese Works", "Escopo Preliminar",
+      "Objecoes Levantadas", "Proximo Passo Acordado", "Data Proximo Passo Roteiro",
+    ]
+
+    const rows = reportsToExport.map((report) => {
+      const account = getAccount(report.account_id)
+      const opp = getOpportunity(report.account_id)
+      const visit = report.visit_id ? getVisit(report.visit_id) : undefined
+
+      return [
+        // Relatório
+        report.id, report.tipo, report.titulo, report.status,
+        report.contexto_cliente, report.dores_priorizadas, report.impacto_estimado,
+        report.solucao_proposta, report.entregaveis, report.investimento_mrr,
+        report.prazo_implantacao,
+        report.criado_em ? format(new Date(report.criado_em), "dd/MM/yyyy HH:mm", { locale: ptBR }) : "",
+        report.atualizado_em ? format(new Date(report.atualizado_em), "dd/MM/yyyy HH:mm", { locale: ptBR }) : "",
+        // Conta
+        account?.nome ?? "", account?.segmento ?? "", account?.porte ?? "",
+        account?.tier ?? "", account?.onda ?? "",
+        account?.contato_nome ?? "", account?.contato_cargo ?? "",
+        account?.contato_email ?? "", account?.contato_whatsapp ?? "",
+        account?.fluig_versao ?? "", account?.fluig_modulos?.join("; ") ?? "",
+        account?.score_potencial ?? "", account?.score_maturidade ?? "",
+        account?.score_dor ?? "", account?.score_risco_churn ?? "",
+        account?.score_acesso ?? "", account?.score_total ?? "",
+        account?.observacoes ?? "",
+        account?.criado_em ? format(new Date(account.criado_em), "dd/MM/yyyy HH:mm", { locale: ptBR }) : "",
+        // Oportunidade
+        opp ? OPP_STAGE_LABELS[opp.estagio] : "", opp?.mrr_estimado ?? "",
+        opp?.mrr_fechado ?? "", opp?.pacote_works ?? "", opp?.responsavel ?? "",
+        opp?.proximo_passo ?? "", opp?.data_proximo_passo ?? "", opp?.motivo_perda ?? "",
+        opp?.data_contato ?? "", opp?.data_visita ?? "",
+        opp?.data_proposta ?? "", opp?.data_fechamento ?? "",
+        // Roteiro / Visita
+        visit?.data_visita ?? "", visit?.modalidade ?? "", visit?.participantes_cliente ?? "",
+        visit?.dx_processos_descritos ?? "", visit?.dx_processos_dores ?? "",
+        visit?.dx_processos_impacto ?? "",
+        visit?.dx_automacao_nivel ?? "", visit?.dx_automacao_gaps ?? "",
+        visit?.dx_integracao_sistemas ?? "", visit?.dx_integracao_status ?? "",
+        visit?.dx_governanca_problemas ?? "", visit?.dx_sponsor_engajamento ?? "",
+        visit?.hipotese_works ?? "", visit?.escopo_preliminar ?? "",
+        visit?.objeccoes_levantadas ?? "", visit?.proximo_passo_acordado ?? "",
+        visit?.data_proximo_passo ?? "",
+      ].map(escapeCsv)
+    })
+
+    const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n")
+    const filename = reportsToExport.length === 1
+      ? `relatorio-${getAccount(reportsToExport[0].account_id)?.nome?.replace(/\s+/g, "-").toLowerCase() ?? "doc"}.csv`
+      : `relatorios-completo-${format(new Date(), "yyyy-MM-dd")}.csv`
+    downloadCsv(filename, csv)
+  }
 
   function startEdit(report: ReportDraft) {
     setEditingId(report.id)
@@ -132,6 +245,17 @@ export function RelatorioModule() {
         title="Relatorio Executivo e Proposta Works"
         description="Gerencie e exporte relatorios pre-preenchidos a partir do diagnostico de visita."
       />
+
+      {sortedReports.length > 0 && (
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={handleExportCsvAll}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-fluig-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+          >
+            <FileSpreadsheet className="w-4 h-4" /> Exportar Todos (CSV Completo)
+          </button>
+        </div>
+      )}
 
       {sortedReports.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 gap-4 rounded-xl border border-border bg-card">
@@ -282,6 +406,12 @@ export function RelatorioModule() {
                           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-fluig-secondary text-secondary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
                         >
                           <Download className="w-4 h-4" /> Exportar PDF
+                        </button>
+                        <button
+                          onClick={() => handleExportCsvSingle(report.id)}
+                          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-fluig-secondary text-fluig-secondary text-sm font-medium hover:bg-fluig-secondary/10 transition-colors"
+                        >
+                          <FileSpreadsheet className="w-4 h-4" /> Exportar CSV
                         </button>
                       </div>
                     </>
