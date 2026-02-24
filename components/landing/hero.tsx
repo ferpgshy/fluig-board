@@ -54,7 +54,7 @@ export function HeroSection() {
                 <div className="w-3 h-3 rounded-full bg-[#f44336]" />
                 <div className="w-3 h-3 rounded-full bg-[#ffc107]" />
                 <div className="w-3 h-3 rounded-full bg-[#4caf50]" />
-                <span className="ml-2 text-xs text-white/50 font-mono">FluigOrbit Dashboard</span>
+                <span className="ml-2 text-xs text-white/50 font-mono">Fluig Board Dashboard</span>
               </div>
 
               {/* Mock KPI Row */}

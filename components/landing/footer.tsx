@@ -33,13 +33,13 @@ export function FooterSection() {
               <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-[#0077b6]">
                 <Orbit className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold text-white">FluigOrbit</span>
+              <span className="text-xl font-bold text-white">Fluig Board</span>
             </div>
             <p className="text-sm text-white/60 leading-relaxed max-w-sm mb-6">
               Plataforma estrategica de gestao de contas, pipeline inteligente, roteiro consultivo e relatorios executivos para equipes comerciais de alta performance.
             </p>
             <div className="flex items-center gap-2 text-sm text-white/40">
-              <span>contato@fluigorbit.com.br</span>
+              <span>contato@fluigboard.com.br</span>
             </div>
           </div>
 
@@ -68,7 +68,7 @@ export function FooterSection() {
       <div className="border-t border-white/10">
         <div className="max-w-7xl mx-auto px-6 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs text-white/40">
-            {"2025 FluigOrbit. Todos os direitos reservados."}
+            {"2025 Fluig Board. Todos os direitos reservados."}
           </p>
           <div className="flex items-center gap-6">
             <Link href="#" className="text-xs text-white/40 hover:text-white/70 transition-colors">

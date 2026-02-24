@@ -15,7 +15,7 @@ export function CtaSection() {
           Pronto para transformar sua gestao comercial?
         </h2>
         <p className="text-lg text-white/80 mb-10 max-w-2xl mx-auto text-pretty">
-          Agende uma demonstracao personalizada e descubra como o FluigOrbit pode elevar a maturidade da sua operacao comercial com inteligencia e governanca.
+          Agende uma demonstracao personalizada e descubra como o Fluig Board pode elevar a maturidade da sua operacao comercial com inteligencia e governanca.
         </p>
         <Link
           href="/app"

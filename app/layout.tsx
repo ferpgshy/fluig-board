@@ -7,7 +7,7 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'Fluig CRM - Gestão Comercial Inteligente',
+  title: 'Fluig Board - Gestão Comercial Inteligente',
   description: 'Plataforma de gestão comercial com pipeline, assessment e relatórios corporativos.',
   generator: 'v0.app',
   icons: {
