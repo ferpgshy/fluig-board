@@ -54,6 +54,7 @@ export function ContasModule() {
   const updateAccount = useStore((s) => s.updateAccount)
   const deleteAccount = useStore((s) => s.deleteAccount)
   const addOpportunity = useStore((s) => s.addOpportunity)
+  const moveOpportunityStage = useStore((s) => s.moveOpportunityStage)
 
   const [search, setSearch] = useState("")
   const [filterTier, setFilterTier] = useState<Tier | "todos">("todos")
@@ -195,6 +196,22 @@ export function ContasModule() {
     return opportunities.find((o) => o.account_id === accountId && isOppActive(o.estagio))
   }
 
+  const getAnyOppForAccount = (accountId: string) => {
+    // Retorna opp ativa ou a mais recente (fechada/perdida)
+    const active = opportunities.find((o) => o.account_id === accountId && isOppActive(o.estagio))
+    if (active) return active
+    return opportunities
+      .filter((o) => o.account_id === accountId)
+      .sort((a, b) => new Date(b.atualizado_em).getTime() - new Date(a.atualizado_em).getTime())[0] ?? null
+  }
+
+  function getStageDisplay(opp: typeof opportunities[0] | null | undefined): string {
+    if (!opp) return ""
+    if (opp.estagio === "works_fechado") return "Finalizado"
+    if (opp.estagio === "perdido") return "Finalizado (Perdido)"
+    return OPP_STAGE_LABELS[opp.estagio]
+  }
+
   return (
     <div>
       <SectionHeader
@@ -258,6 +275,7 @@ export function ContasModule() {
                   <span className="flex items-center justify-center gap-1">Score <ArrowUpDown className="w-3 h-3" /></span>
                 </th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">Estagio Opp.</th>
+                <th className="text-right px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">MRR</th>
                 <th className="text-center px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">Onda</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">Proximo Passo</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden xl:table-cell">Data</th>
@@ -266,22 +284,29 @@ export function ContasModule() {
             </thead>
             <tbody>
               {filtered.map((account) => {
-                const opp = getOppForAccount(account.id)
-                const ppVencido = opp && opp.data_proximo_passo && new Date(opp.data_proximo_passo) < new Date() && isOppActive(opp.estagio)
+                const opp = getAnyOppForAccount(account.id)
+                const activeOpp = getOppForAccount(account.id)
+                const ppVencido = activeOpp && activeOpp.data_proximo_passo && new Date(activeOpp.data_proximo_passo) < new Date() && isOppActive(activeOpp.estagio)
+                const stageText = getStageDisplay(opp)
+                const mrrValue = opp ? (opp.estagio === "works_fechado" ? opp.mrr_fechado : opp.mrr_estimado) : 0
+                const isFinalizado = opp && (opp.estagio === "works_fechado" || opp.estagio === "perdido")
                 return (
                   <tr key={account.id} className="border-b border-border last:border-b-0 hover:bg-muted/50 transition-colors">
                     <td className="px-4 py-3 font-medium text-foreground">{account.nome}</td>
                     <td className="px-4 py-3 text-center"><TierBadge tier={account.tier} /></td>
                     <td className="px-4 py-3 text-center font-semibold text-foreground">{account.score_total}/25</td>
-                    <td className="px-4 py-3 text-muted-foreground hidden md:table-cell text-xs">
-                      {opp ? OPP_STAGE_LABELS[opp.estagio] : <span className="text-muted-foreground/50">--</span>}
+                    <td className={`px-4 py-3 hidden md:table-cell text-xs font-medium ${isFinalizado ? (opp?.estagio === "works_fechado" ? "text-fluig-success" : "text-fluig-danger") : "text-muted-foreground"}`}>
+                      {stageText || <span className="text-muted-foreground/50">--</span>}
+                    </td>
+                    <td className="px-4 py-3 text-right hidden md:table-cell text-xs font-semibold text-foreground">
+                      {mrrValue > 0 ? `R$ ${mrrValue.toLocaleString("pt-BR")}` : <span className="text-muted-foreground/50">--</span>}
                     </td>
                     <td className="px-4 py-3 text-center text-muted-foreground hidden lg:table-cell">{account.onda}</td>
                     <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell text-xs max-w-[200px] truncate">
-                      {opp?.proximo_passo || "--"}
+                      {activeOpp?.proximo_passo || "--"}
                     </td>
                     <td className={`px-4 py-3 hidden xl:table-cell text-xs ${ppVencido ? "text-fluig-danger font-semibold" : "text-muted-foreground"}`}>
-                      {opp?.data_proximo_passo ? format(new Date(opp.data_proximo_passo), "dd/MM/yyyy", { locale: ptBR }) : "--"}
+                      {activeOpp?.data_proximo_passo ? format(new Date(activeOpp.data_proximo_passo), "dd/MM/yyyy", { locale: ptBR }) : "--"}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
@@ -300,7 +325,7 @@ export function ContasModule() {
                 )
               })}
               {filtered.length === 0 && (
-                <tr><td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">Nenhuma conta encontrada.</td></tr>
+                <tr><td colSpan={9} className="px-4 py-12 text-center text-muted-foreground">Nenhuma conta encontrada.</td></tr>
               )}
             </tbody>
           </table>
@@ -319,23 +344,38 @@ export function ContasModule() {
               <X className="w-5 h-5" />
             </button>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-            {[
+          {(() => {
+            const detailOpp = getAnyOppForAccount(detailAccount.id)
+            const detailFields = [
               { label: "Segmento", value: detailAccount.segmento },
               { label: "Porte", value: detailAccount.porte },
-              { label: "Contato", value: `${detailAccount.contato_nome} (${detailAccount.contato_cargo})` },
-              { label: "Email", value: detailAccount.contato_email },
-              { label: "WhatsApp", value: detailAccount.contato_whatsapp },
-              { label: "Fluig Versao", value: detailAccount.fluig_versao },
-              { label: "Modulos", value: detailAccount.fluig_modulos.join(", ") || "--" },
+              detailAccount.contato_nome ? { label: "Contato", value: `${detailAccount.contato_nome}${detailAccount.contato_cargo ? ` (${detailAccount.contato_cargo})` : ""}` } : null,
+              detailAccount.contato_email ? { label: "Email", value: detailAccount.contato_email } : null,
+              detailAccount.contato_whatsapp ? { label: "WhatsApp", value: detailAccount.contato_whatsapp } : null,
+              detailAccount.fluig_versao ? { label: "Fluig Versao", value: detailAccount.fluig_versao } : null,
+              detailAccount.fluig_modulos.length > 0 ? { label: "Modulos", value: detailAccount.fluig_modulos.join(", ") } : null,
               { label: "Score / Tier / Onda", value: `${detailAccount.score_total}/25 | Tier ${detailAccount.tier} | Onda ${detailAccount.onda}` },
-            ].map((item) => (
-              <div key={item.label} className="p-3 rounded-lg" style={{ background: "var(--fluig-readonly)" }}>
-                <p className="text-xs text-muted-foreground mb-1">{item.label}</p>
-                <p className="font-medium text-foreground text-sm">{item.value}</p>
+              detailOpp ? { label: "Estagio Pipeline", value: getStageDisplay(detailOpp) } : null,
+              detailOpp ? { label: "MRR Estimado", value: `R$ ${detailOpp.mrr_estimado.toLocaleString("pt-BR")}/mes` } : null,
+              detailOpp && detailOpp.mrr_fechado > 0 ? { label: "MRR Fechado", value: `R$ ${detailOpp.mrr_fechado.toLocaleString("pt-BR")}/mes` } : null,
+              detailOpp?.pacote_works ? { label: "Pacote Works", value: detailOpp.pacote_works } : null,
+              detailOpp?.responsavel ? { label: "Responsavel", value: detailOpp.responsavel } : null,
+              detailOpp?.proximo_passo ? { label: "Proximo Passo", value: detailOpp.proximo_passo } : null,
+              detailOpp?.data_proximo_passo ? { label: "Data Prox. Passo", value: format(new Date(detailOpp.data_proximo_passo), "dd/MM/yyyy", { locale: ptBR }) } : null,
+              detailOpp?.motivo_perda ? { label: "Motivo Perda", value: detailOpp.motivo_perda } : null,
+            ].filter(Boolean) as { label: string; value: string }[]
+
+            return (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+                {detailFields.map((item) => (
+                  <div key={item.label} className="p-3 rounded-lg" style={{ background: "var(--fluig-readonly)" }}>
+                    <p className="text-xs text-muted-foreground mb-1">{item.label}</p>
+                    <p className="font-medium text-foreground text-sm">{item.value}</p>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            )
+          })()}
           {/* Individual scores */}
           <div className="mb-4">
             <p className="text-sm font-medium text-muted-foreground mb-2">Scoring por Dimensao</p>
