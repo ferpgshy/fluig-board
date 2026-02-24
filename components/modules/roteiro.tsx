@@ -99,18 +99,26 @@ export function RoteiroModule() {
   }
 
   // Auto-save every 30 seconds
-  const doAutoSave = useCallback(() => {
+  const doAutoSave = useCallback(async (): Promise<string | null> => {
     if (!visitId && selectedAccountId && selectedOppId) {
-      const id = addVisit(form)
-      setVisitId(id)
-      setAutoSaved(true)
-      setTimeout(() => setAutoSaved(false), 2000)
+      try {
+        const id = await addVisit(form)
+        setVisitId(id)
+        setAutoSaved(true)
+        setTimeout(() => setAutoSaved(false), 2000)
+        return id
+      } catch (e) {
+        console.error("Erro ao salvar visita:", e)
+        return null
+      }
     } else if (visitId) {
       const { ...data } = form
-      updateVisit(visitId, data)
+      await updateVisit(visitId, data)
       setAutoSaved(true)
       setTimeout(() => setAutoSaved(false), 2000)
+      return visitId
     }
+    return null
   }, [visitId, form, selectedAccountId, selectedOppId, addVisit, updateVisit])
 
   useEffect(() => {
@@ -127,19 +135,19 @@ export function RoteiroModule() {
     if (step >= 0) doAutoSave()
   }
 
-  function handleGenerate() {
+  async function handleGenerate() {
     setReportError("")
     // Save visit first
-    doAutoSave()
+    const savedId = await doAutoSave()
 
-    const vId = visitId
+    const vId = savedId || visitId
     if (!vId) {
       setReportError("Salve a visita antes de gerar o rascunho.")
       return
     }
 
     // Mapping Visit -> ReportDraft per PRD
-    const result = addReport({
+    const result = await addReport({
       visit_id: vId,
       account_id: selectedAccountId,
       tipo: "Relatorio_Executivo",
