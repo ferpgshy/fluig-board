@@ -59,6 +59,7 @@ export async function PATCH(
     if (acao === "aprovar") {
       // Criar usuario no Supabase Auth
       const tempPassword = `Fluig@${Math.random().toString(36).slice(2, 8).toUpperCase()}!`
+      let userId: string | undefined
 
       const { data: newUser, error: createError } = await admin.auth.admin.createUser({
         email: request.email,
@@ -72,18 +73,30 @@ export async function PATCH(
 
       if (createError) {
         if (createError.message.includes("already been registered")) {
-          // Usuario ja existe, apenas atualiza a solicitacao
+          // Usuario ja existe — buscar pelo email e atualizar senha
+          const { data: listData } = await admin.auth.admin.listUsers()
+          const existingUser = listData?.users?.find(
+            (u) => u.email?.toLowerCase() === request.email.toLowerCase()
+          )
+          if (existingUser) {
+            userId = existingUser.id
+            // Atualizar senha temporaria para o usuario existente
+            await admin.auth.admin.updateUser(userId, { password: tempPassword })
+          }
         } else {
           throw createError
         }
+      } else {
+        userId = newUser?.user?.id
       }
 
       // Atualizar profile com dados da solicitacao
-      const userId = newUser?.user?.id
       if (userId) {
+        // Upsert: se profile nao existe, cria; se existe, atualiza
         await admin
           .from("profiles")
-          .update({
+          .upsert({
+            id: userId,
             nome: request.nome,
             email: request.email,
             empresa: request.empresa,
@@ -91,8 +104,7 @@ export async function PATCH(
             telefone: request.telefone || "",
             role: "user",
             ativado: true,
-          })
-          .eq("id", userId)
+          }, { onConflict: "id" })
       }
 
       // Marcar solicitacao como aprovada
