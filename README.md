@@ -659,7 +659,7 @@ O projeto segue o padrão [Conventional Commits](https://www.conventionalcommits
 
 ## 📄 Licença
 
-Este projeto é privado e de uso interno.
+Este projeto é **proprietário** e protegido por direitos autorais. O código-fonte está disponível publicamente apenas para fins informativos e de portfólio. **Nenhuma permissão** é concedida para copiar, modificar, distribuir ou usar o Software sem autorização prévia e por escrito. Consulte o arquivo [LICENSE](LICENSE) para detalhes completos.
 
 ---
 
