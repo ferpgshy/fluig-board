@@ -10,7 +10,6 @@ export async function GET() {
   const { data, error } = await supabase
     .from("accounts")
     .select("*")
-    .eq("user_id", user.id)
     .order("score_total", { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
