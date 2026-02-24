@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { useInitStore } from "@/hooks/use-init-store"
+import { useRealtimeSync } from "@/hooks/use-realtime-sync"
 import {
   Building2,
   LayoutDashboard,
@@ -50,6 +51,7 @@ export function AppShell({ activeModule, onModuleChange, children }: AppShellPro
   const userMenuRef = useRef<HTMLDivElement>(null)
 
   useInitStore()
+  useRealtimeSync()
 
   useEffect(() => {
     async function loadProfile() {
