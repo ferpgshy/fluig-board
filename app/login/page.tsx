@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Eye, EyeOff, LogIn, Loader2 } from "lucide-react"
 import { AuthLayout } from "@/components/auth/auth-layout"
+import { createClient } from "@/lib/supabase/client"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -20,17 +21,24 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      // TODO: Integrar com backend de autenticacao
-      // const res = await fetch("/api/auth/login", {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({ email, password }),
-      // })
-      // if (!res.ok) throw new Error("Credenciais invalidas")
+      const supabase = createClient()
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-      // Simula delay para feedback visual
-      await new Promise((r) => setTimeout(r, 800))
+      if (authError) {
+        if (authError.message.includes("Invalid login credentials")) {
+          throw new Error("E-mail ou senha incorretos.")
+        }
+        if (authError.message.includes("Email not confirmed")) {
+          throw new Error("Confirme seu e-mail antes de fazer login.")
+        }
+        throw new Error(authError.message)
+      }
+
       router.push("/app")
+      router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao fazer login")
     } finally {

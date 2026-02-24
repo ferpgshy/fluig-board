@@ -4,6 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { Mail, Loader2, ArrowLeft, CheckCircle } from "lucide-react"
 import { AuthLayout } from "@/components/auth/auth-layout"
+import { createClient } from "@/lib/supabase/client"
 
 export default function EsqueciSenhaPage() {
   const [email, setEmail] = useState("")
@@ -17,18 +18,15 @@ export default function EsqueciSenhaPage() {
     setLoading(true)
 
     try {
-      // TODO: Integrar com backend de recuperacao de senha
-      // const res = await fetch("/api/auth/forgot-password", {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({ email }),
-      // })
-      // if (!res.ok) {
-      //   const data = await res.json()
-      //   throw new Error(data.message || "Erro ao enviar e-mail")
-      // }
+      const supabase = createClient()
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/redefinir-senha`,
+      })
 
-      await new Promise((r) => setTimeout(r, 800))
+      if (resetError) {
+        throw new Error(resetError.message)
+      }
+
       setSent(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao enviar e-mail de recuperacao")

@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Eye, EyeOff, UserPlus, Loader2 } from "lucide-react"
 import { AuthLayout } from "@/components/auth/auth-layout"
+import { createClient } from "@/lib/supabase/client"
 
 export default function CadastroPage() {
   const router = useRouter()
@@ -39,24 +40,29 @@ export default function CadastroPage() {
     setLoading(true)
 
     try {
-      // TODO: Integrar com backend de autenticacao
-      // const res = await fetch("/api/auth/register", {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({
-      //     nome: form.nome,
-      //     email: form.email,
-      //     empresa: form.empresa,
-      //     password: form.password,
-      //   }),
-      // })
-      // if (!res.ok) {
-      //   const data = await res.json()
-      //   throw new Error(data.message || "Erro ao criar conta")
-      // }
+      const supabase = createClient()
+      const { error: authError } = await supabase.auth.signUp({
+        email: form.email,
+        password: form.password,
+        options: {
+          emailRedirectTo:
+            process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
+            `${window.location.origin}/app`,
+          data: {
+            nome: form.nome,
+            empresa: form.empresa,
+          },
+        },
+      })
 
-      await new Promise((r) => setTimeout(r, 800))
-      router.push("/login")
+      if (authError) {
+        if (authError.message.includes("already registered")) {
+          throw new Error("Este e-mail ja esta cadastrado.")
+        }
+        throw new Error(authError.message)
+      }
+
+      router.push("/cadastro/sucesso?email=" + encodeURIComponent(form.email))
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao criar conta")
     } finally {
