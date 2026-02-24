@@ -4,7 +4,6 @@ import { useState } from "react"
 import Link from "next/link"
 import { Mail, Loader2, ArrowLeft, CheckCircle } from "lucide-react"
 import { AuthLayout } from "@/components/auth/auth-layout"
-import { createClient } from "@/lib/supabase/client"
 
 export default function EsqueciSenhaPage() {
   const [email, setEmail] = useState("")
@@ -18,13 +17,15 @@ export default function EsqueciSenhaPage() {
     setLoading(true)
 
     try {
-      const supabase = createClient()
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/redefinir-senha`,
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
       })
 
-      if (resetError) {
-        throw new Error(resetError.message)
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Erro ao enviar e-mail")
       }
 
       setSent(true)
