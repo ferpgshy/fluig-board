@@ -2,8 +2,8 @@ import Link from "next/link"
 import { Orbit, ArrowLeft, Shield } from "lucide-react"
 
 export const metadata = {
-  title: "Politica de Privacidade | Fluig Board",
-  description: "Saiba como o Fluig Board coleta, usa e protege seus dados pessoais.",
+  title: "Politica de Privacidade | Fluig | Ação Comercial",
+  description: "Saiba como o Fluig | Ação Comercial coleta, usa e protege seus dados pessoais.",
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -25,7 +25,7 @@ export default function PrivacidadePage() {
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#0077b6]">
               <Orbit className="w-4 h-4 text-white" />
             </div>
-            <span className="text-lg font-bold text-foreground">Fluig Board</span>
+            <span className="text-lg font-bold text-foreground">Fluig | Ação Comercial</span>
           </Link>
           <Link
             href="/"
@@ -56,7 +56,7 @@ export default function PrivacidadePage() {
           <div className="prose-none">
             <Section title="1. Quem somos">
               <p>
-                O <strong className="text-foreground">Fluig Board</strong> e uma plataforma de gestao comercial desenvolvida para equipes de vendas e consultoria Fluig. Neste documento, "nos", "nosso" ou "Fluig Board" referem-se ao responsavel pelo tratamento dos seus dados pessoais.
+                O <strong className="text-foreground">Fluig | Ação Comercial</strong> e uma plataforma de gestao comercial desenvolvida para equipes de vendas e consultoria Fluig. Neste documento, "nos", "nosso" ou "Fluig | Ação Comercial" referem-se ao responsavel pelo tratamento dos seus dados pessoais.
               </p>
               <p>
                 Em caso de duvidas, entre em contato: <a href="mailto:privacidade@fluigboard.com.br" className="text-[#0077b6] hover:underline">privacidade@fluigboard.com.br</a>
@@ -150,7 +150,7 @@ export default function PrivacidadePage() {
           {/* Footer da pagina */}
           <div className="mt-12 pt-8 border-t border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <p className="text-xs text-muted-foreground">
-              Fluig Board — CNPJ: 00.000.000/0001-00
+              Fluig | Ação Comercial — CNPJ: 00.000.000/0001-00
             </p>
             <div className="flex items-center gap-4">
               <Link href="/contato" className="text-xs text-[#0077b6] hover:underline">

@@ -3,8 +3,8 @@
 import { useState } from "react"
 
 const ADMINS = [
-  { email: "fernando.garcia2505@hotmail.com", nome: "Fernando Garcia", empresa: "Fluig Board" },
-  { email: "marcio.souto@fluig.com", nome: "Marcio Souto", empresa: "Fluig Board" },
+  { email: "fernando.garcia2505@hotmail.com", nome: "Fernando Garcia", empresa: "Fluig | Ação Comercial" },
+  { email: "marcio.souto@fluig.com", nome: "Marcio Souto", empresa: "Fluig | Ação Comercial" },
 ]
 
 export default function SeedPage() {

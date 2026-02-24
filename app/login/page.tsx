@@ -61,7 +61,7 @@ export default function LoginPage() {
   return (
     <AuthLayout
       title="Entrar na plataforma"
-      subtitle="Insira suas credenciais para acessar o Fluig Board."
+      subtitle="Insira suas credenciais para acessar o Fluig | Ação Comercial."
     >
       <form onSubmit={handleSubmit} className="space-y-5">
         {error && (

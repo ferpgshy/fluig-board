@@ -26,7 +26,7 @@ export function AuthLayout({
             <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/15 backdrop-blur-sm">
               <Orbit className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-white">Fluig Board</span>
+            <span className="text-xl font-bold text-white">Fluig | Ação Comercial</span>
           </Link>
         </div>
 
@@ -56,7 +56,7 @@ export function AuthLayout({
         </div>
 
         <p className="text-xs text-white/40">
-          &copy; {new Date().getFullYear()} Fluig Board. Todos os direitos reservados.
+          &copy; {new Date().getFullYear()} Fluig | Ação Comercial. Todos os direitos reservados.
         </p>
       </div>
 
@@ -71,7 +71,7 @@ export function AuthLayout({
             >
               <Orbit className="w-4.5 h-4.5 text-white" />
             </div>
-            <span className="text-lg font-bold text-foreground">Fluig Board</span>
+            <span className="text-lg font-bold text-foreground">Fluig | Ação Comercial</span>
           </Link>
         </div>
 
