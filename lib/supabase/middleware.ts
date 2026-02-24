@@ -42,15 +42,8 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Redirect authenticated users away from auth pages (except admin/setup)
-  if (
-    user &&
-    (pathname === '/login' || pathname === '/cadastro')
-  ) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/app'
-    return NextResponse.redirect(url)
-  }
+  // Nao redireciona automaticamente de /login - o fluxo de login decide o destino
+  // baseado no role/ativado do profile via /api/auth/check
 
   return supabaseResponse
 }

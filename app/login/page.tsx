@@ -22,10 +22,12 @@ export default function LoginPage() {
 
     try {
       const supabase = createClient()
-      const { error: authError } = await supabase.auth.signInWithPassword({
+      console.log("[v0] Attempting signInWithPassword for:", email)
+      const { data: signInData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
+      console.log("[v0] SignIn result:", { user: signInData?.user?.id, error: authError?.message })
 
       if (authError) {
         if (authError.message.includes("Invalid login credentials")) {
@@ -37,43 +39,17 @@ export default function LoginPage() {
         throw new Error(authError.message)
       }
 
-      // Verificar profile para redirecionar corretamente
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        // Retry para evitar erro transitorio de schema cache
-        let profile = null
-        for (let attempt = 0; attempt < 3; attempt++) {
-          const { data, error: profileError } = await supabase
-            .from("profiles")
-            .select("role, ativado")
-            .eq("id", user.id)
-            .single()
-          if (!profileError) {
-            profile = data
-            break
-          }
-          if (attempt < 2) await new Promise((r) => setTimeout(r, 500))
-        }
+      // Verificar profile via API server-side (evita erro de schema no client)
+      console.log("[v0] Calling /api/auth/check")
+      const checkRes = await fetch("/api/auth/check")
+      const checkData = await checkRes.json()
+      console.log("[v0] Check result:", checkData)
 
-        if (profile?.role === "admin" && !profile.ativado) {
-          router.push("/admin/setup")
-          router.refresh()
-          return
-        }
-
-        if (profile?.role === "admin") {
-          router.push("/admin")
-          router.refresh()
-          return
-        }
-
-        if (!profile?.ativado) {
-          await supabase.auth.signOut()
-          throw new Error("Sua conta ainda nao foi ativada. Entre em contato com o administrador.")
-        }
+      if (checkData.error) {
+        throw new Error(checkData.error)
       }
 
-      router.push("/app")
+      router.push(checkData.redirect || "/app")
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao fazer login")
