@@ -1,28 +1,25 @@
-"use client"
+import { Navbar } from "@/components/landing/navbar"
+import { HeroSection } from "@/components/landing/hero"
+import { ProblemaSection } from "@/components/landing/problema"
+import { SolucaoSection } from "@/components/landing/solucao"
+import { DiferenciaisSection } from "@/components/landing/diferenciais"
+import { ProdutoSection } from "@/components/landing/produto"
+import { ComoFuncionaSection } from "@/components/landing/como-funciona"
+import { CtaSection } from "@/components/landing/cta"
+import { FooterSection } from "@/components/landing/footer"
 
-import { useState } from "react"
-import { AppShell, type ModuleId } from "@/components/fluig/app-shell"
-import { DashboardModule } from "@/components/modules/dashboard"
-import { ContasModule } from "@/components/modules/contas"
-import { PipelineModule } from "@/components/modules/pipeline"
-import { RoteiroModule } from "@/components/modules/roteiro"
-import { RelatorioModule } from "@/components/modules/relatorio"
-
-const MODULES: Record<ModuleId, React.ComponentType> = {
-  dashboard: DashboardModule,
-  contas: ContasModule,
-  pipeline: PipelineModule,
-  roteiro: RoteiroModule,
-  relatorio: RelatorioModule,
-}
-
-export default function Page() {
-  const [activeModule, setActiveModule] = useState<ModuleId>("dashboard")
-  const ActiveComponent = MODULES[activeModule]
-
+export default function LandingPage() {
   return (
-    <AppShell activeModule={activeModule} onModuleChange={setActiveModule}>
-      <ActiveComponent />
-    </AppShell>
+    <main>
+      <Navbar />
+      <HeroSection />
+      <ProblemaSection />
+      <SolucaoSection />
+      <DiferenciaisSection />
+      <ProdutoSection />
+      <ComoFuncionaSection />
+      <CtaSection />
+      <FooterSection />
+    </main>
   )
 }
