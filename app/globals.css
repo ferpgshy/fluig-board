@@ -98,8 +98,31 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    scrollbar-width: thin;
+    scrollbar-color: var(--fluig-primary) transparent;
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Webkit (Chrome, Edge, Safari) */
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 3px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: var(--fluig-primary);
+    border-radius: 3px;
+    transition: background 0.2s;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--fluig-secondary);
+  }
+  *::-webkit-scrollbar-corner {
+    background: transparent;
   }
 }
