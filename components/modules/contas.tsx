@@ -351,11 +351,11 @@ export function ContasModule() {
         </div>
       )}
 
-      {/* Drawer */}
+      {/* Modal */}
       {drawerOpen && (
-        <div className="fixed inset-0 z-50 flex items-start justify-end">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-foreground/30" onClick={() => { setDrawerOpen(false); resetForm() }} />
-          <div className="relative w-full max-w-lg h-full bg-card border-l border-border overflow-y-auto">
+          <div className="relative w-full max-w-2xl max-h-[90vh] bg-card border border-border rounded-xl overflow-y-auto">
             <div className="px-6 py-5 text-primary-foreground" style={{ background: "linear-gradient(135deg, var(--fluig-primary) 0%, var(--fluig-secondary) 100%)" }}>
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold">{editingAccount ? "Editar Conta" : "Nova Conta"}</h3>
