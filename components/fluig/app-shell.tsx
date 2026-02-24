@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { useStore } from "@/lib/store"
 import { createClient } from "@/lib/supabase/client"
+import { useInitStore } from "@/hooks/use-init-store"
 import {
   Building2,
   LayoutDashboard,
@@ -48,11 +48,8 @@ export function AppShell({ activeModule, onModuleChange, children }: AppShellPro
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const userMenuRef = useRef<HTMLDivElement>(null)
-  const seedDemoData = useStore((s) => s.seedDemoData)
 
-  useEffect(() => {
-    seedDemoData()
-  }, [seedDemoData])
+  useInitStore()
 
   useEffect(() => {
     async function loadProfile() {
