@@ -29,24 +29,23 @@ export async function updateSession(request: NextRequest) {
     },
   )
 
-  // IMPORTANT: Do not run code between createServerClient and
-  // supabase.auth.getUser().
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Protect /app route - redirect to login if not authenticated
-  if (request.nextUrl.pathname.startsWith('/app') && !user) {
+  const pathname = request.nextUrl.pathname
+
+  // Protect /app and /admin routes - redirect to login if not authenticated
+  if ((pathname.startsWith('/app') || pathname.startsWith('/admin')) && !user) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  // Redirect authenticated users away from auth pages
+  // Redirect authenticated users away from auth pages (except admin/setup)
   if (
     user &&
-    (request.nextUrl.pathname === '/login' ||
-      request.nextUrl.pathname === '/cadastro')
+    (pathname === '/login' || pathname === '/cadastro')
   ) {
     const url = request.nextUrl.clone()
     url.pathname = '/app'

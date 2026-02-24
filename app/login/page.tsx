@@ -37,6 +37,33 @@ export default function LoginPage() {
         throw new Error(authError.message)
       }
 
+      // Verificar profile para redirecionar corretamente
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role, ativado")
+          .eq("id", user.id)
+          .single()
+
+        if (profile?.role === "admin" && !profile.ativado) {
+          router.push("/admin/setup")
+          router.refresh()
+          return
+        }
+
+        if (profile?.role === "admin") {
+          router.push("/admin")
+          router.refresh()
+          return
+        }
+
+        if (!profile?.ativado) {
+          await supabase.auth.signOut()
+          throw new Error("Sua conta ainda nao foi ativada. Entre em contato com o administrador.")
+        }
+      }
+
       router.push("/app")
       router.refresh()
     } catch (err) {

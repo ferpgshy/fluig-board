@@ -1,7 +1,9 @@
 "use client"
 
-import { useState, type ReactNode, useEffect } from "react"
+import { useState, useEffect, useRef, type ReactNode } from "react"
+import { useRouter } from "next/navigation"
 import { useStore } from "@/lib/store"
+import { createClient } from "@/lib/supabase/client"
 import {
   Building2,
   LayoutDashboard,
@@ -10,6 +12,10 @@ import {
   FileText,
   Menu,
   X,
+  LogOut,
+  Shield,
+  User,
+  ChevronDown,
 } from "lucide-react"
 
 export type ModuleId = "dashboard" | "contas" | "pipeline" | "roteiro" | "relatorio"
@@ -19,7 +25,7 @@ const NAV_ITEMS: { id: ModuleId; label: string; icon: ReactNode }[] = [
   { id: "contas", label: "Contas", icon: <Building2 className="w-5 h-5" /> },
   { id: "pipeline", label: "Pipeline", icon: <KanbanSquare className="w-5 h-5" /> },
   { id: "roteiro", label: "Roteiro", icon: <ClipboardList className="w-5 h-5" /> },
-  { id: "relatorio", label: "Relatórios", icon: <FileText className="w-5 h-5" /> },
+  { id: "relatorio", label: "Relatorios", icon: <FileText className="w-5 h-5" /> },
 ]
 
 interface AppShellProps {
@@ -28,13 +34,65 @@ interface AppShellProps {
   children: ReactNode
 }
 
+interface UserProfile {
+  nome: string
+  email: string
+  role: string
+}
+
 export function AppShell({ activeModule, onModuleChange, children }: AppShellProps) {
+  const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const userMenuRef = useRef<HTMLDivElement>(null)
   const seedDemoData = useStore((s) => s.seedDemoData)
 
   useEffect(() => {
     seedDemoData()
   }, [seedDemoData])
+
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const res = await fetch("/api/profile")
+        if (res.ok) {
+          const data = await res.json()
+          setProfile(data.profile)
+        }
+      } catch {
+        // silently fail
+      }
+    }
+    loadProfile()
+  }, [])
+
+  // Close user menu on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  async function handleLogout() {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push("/login")
+    router.refresh()
+  }
+
+  const initials = profile?.nome
+    ? profile.nome
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    : "?"
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -55,10 +113,11 @@ export function AppShell({ activeModule, onModuleChange, children }: AppShellPro
               {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
             <div>
-              <h1 className="text-xl font-bold tracking-tight">Fluig CRM</h1>
-              <p className="text-sm opacity-80">Gestão Comercial Inteligente</p>
+              <h1 className="text-xl font-bold tracking-tight">Fluig Board</h1>
+              <p className="text-sm opacity-80">Gestao Comercial Inteligente</p>
             </div>
           </div>
+
           <nav className="hidden lg:flex items-center gap-1">
             {NAV_ITEMS.map((item) => (
               <button
@@ -75,6 +134,78 @@ export function AppShell({ activeModule, onModuleChange, children }: AppShellPro
               </button>
             ))}
           </nav>
+
+          {/* User menu */}
+          <div className="relative" ref={userMenuRef}>
+            <button
+              onClick={() => setUserMenuOpen(!userMenuOpen)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/10 transition-colors"
+            >
+              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold text-white">
+                {initials}
+              </div>
+              <span className="hidden sm:block text-sm font-medium text-white/90 max-w-[120px] truncate">
+                {profile?.nome || "Carregando..."}
+              </span>
+              <ChevronDown className={`w-4 h-4 text-white/60 transition-transform ${userMenuOpen ? "rotate-180" : ""}`} />
+            </button>
+
+            {userMenuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-56 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden">
+                {/* User info */}
+                <div className="px-4 py-3 border-b border-border">
+                  <p className="text-sm font-medium text-foreground truncate">{profile?.nome || "Carregando..."}</p>
+                  <p className="text-xs text-muted-foreground truncate">{profile?.email || ""}</p>
+                  {profile?.role === "admin" && (
+                    <span
+                      className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                      style={{ backgroundColor: "rgba(0,119,182,0.1)", color: "var(--fluig-primary)" }}
+                    >
+                      <Shield className="w-3 h-3" />
+                      Administrador
+                    </span>
+                  )}
+                </div>
+
+                {/* Menu items */}
+                <div className="py-1">
+                  {profile?.role === "admin" && (
+                    <button
+                      onClick={() => {
+                        setUserMenuOpen(false)
+                        router.push("/admin")
+                      }}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
+                    >
+                      <Shield className="w-4 h-4 text-muted-foreground" />
+                      Painel Admin
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      setUserMenuOpen(false)
+                      router.push("/perfil")
+                    }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
+                  >
+                    <User className="w-4 h-4 text-muted-foreground" />
+                    Meu Perfil
+                  </button>
+                  <div className="border-t border-border my-1" />
+                  <button
+                    onClick={() => {
+                      setUserMenuOpen(false)
+                      handleLogout()
+                    }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-destructive hover:bg-destructive/5 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sair
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
