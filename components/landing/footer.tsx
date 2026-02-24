@@ -17,8 +17,8 @@ const LINKS = {
   Suporte: [
     { label: "Solicitar Acesso", href: "/cadastro" },
     { label: "Login", href: "/login" },
-    { label: "Contato", href: "mailto:contato@fluigboard.com.br" },
-    { label: "Politica de Privacidade", href: "#" },
+    { label: "Contato", href: "/contato" },
+    { label: "Politica de Privacidade", href: "/privacidade" },
   ],
 }
 
@@ -74,11 +74,11 @@ export function FooterSection() {
             {"2025 Fluig Board. Todos os direitos reservados."}
           </p>
           <div className="flex items-center gap-6">
-            <Link href="#" className="text-xs text-white/40 hover:text-white/70 transition-colors">
+            <Link href="/privacidade" className="text-xs text-white/40 hover:text-white/70 transition-colors">
               Politica de Privacidade
             </Link>
-            <Link href="#" className="text-xs text-white/40 hover:text-white/70 transition-colors">
-              Termos de Servico
+            <Link href="/contato" className="text-xs text-white/40 hover:text-white/70 transition-colors">
+              Contato
             </Link>
           </div>
         </div>
