@@ -81,7 +81,7 @@ export async function PATCH(
           if (existingUser) {
             userId = existingUser.id
             // Atualizar senha temporaria para o usuario existente
-            await admin.auth.admin.updateUser(userId, { password: tempPassword })
+            await admin.auth.admin.updateUserById(userId, { password: tempPassword })
           }
         } else {
           throw createError
