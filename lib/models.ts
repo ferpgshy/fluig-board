@@ -1,6 +1,6 @@
 // === Enums ===
 
-export type Segmento = "Agroindústria" | "Construção e Projetos" | "Educação" | "Logística" | "Manufatura" | "Saúde" | "Serviços" | "Setor Público" | "Varejo"
+export type Segmento = "Agroindústria" | "Construção e Projetos" | "Distribuição" | "Educação" | "Logística" | "Manufatura" | "Saúde" | "Serviços" | "Setor Público" | "Varejo"
 export type Porte = "PME" | "Mid-Market" | "Enterprise"
 export type Tier = "A" | "B" | "C"
 export type Onda = 1 | 2 | 3
