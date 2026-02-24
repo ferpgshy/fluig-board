@@ -40,11 +40,20 @@ export default function LoginPage() {
       // Verificar profile para redirecionar corretamente
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("role, ativado")
-          .eq("id", user.id)
-          .single()
+        // Retry para evitar erro transitorio de schema cache
+        let profile = null
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const { data, error: profileError } = await supabase
+            .from("profiles")
+            .select("role, ativado")
+            .eq("id", user.id)
+            .single()
+          if (!profileError) {
+            profile = data
+            break
+          }
+          if (attempt < 2) await new Promise((r) => setTimeout(r, 500))
+        }
 
         if (profile?.role === "admin" && !profile.ativado) {
           router.push("/admin/setup")
