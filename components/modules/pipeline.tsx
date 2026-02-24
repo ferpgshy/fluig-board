@@ -98,11 +98,6 @@ export function PipelineModule() {
     [opportunities]
   )
 
-  const mrrAberto = useMemo(
-    () => opportunities.filter((o) => isOppActive(o.estagio) && o.estagio !== "works_fechado").reduce((sum, o) => sum + o.mrr_estimado, 0),
-    [opportunities]
-  )
-
   const mrrFechado = useMemo(
     () => opportunities.filter((o) => o.estagio === "works_fechado").reduce((sum, o) => sum + o.mrr_fechado, 0),
     [opportunities]
@@ -236,7 +231,7 @@ export function PipelineModule() {
 
         {/* MRR + Responsavel */}
         <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1"><DollarSign className="w-3 h-3" />R$ {opp.mrr_estimado.toLocaleString("pt-BR")}</span>
+          <span className="flex items-center gap-1"><DollarSign className="w-3 h-3" />R$ {opp.mrr_fechado.toLocaleString("pt-BR")}</span>
           <span className="flex items-center gap-1"><User className="w-3 h-3" />{opp.responsavel}</span>
         </div>
 
@@ -295,11 +290,6 @@ export function PipelineModule() {
           <DollarSign className="w-4 h-4" style={{ color: "var(--fluig-primary)" }} />
           <span className="text-sm text-muted-foreground">MRR Pipeline:</span>
           <span className="text-sm font-bold text-foreground">R$ {pipelineTotal.toLocaleString("pt-BR")}/mes</span>
-        </div>
-        <div className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-card">
-          <DollarSign className="w-4 h-4 text-amber-500" />
-          <span className="text-sm text-muted-foreground">MRR Aberto:</span>
-          <span className="text-sm font-bold text-amber-600 dark:text-amber-400">R$ {mrrAberto.toLocaleString("pt-BR")}/mes</span>
         </div>
         <div className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-card">
           <DollarSign className="w-4 h-4 text-emerald-500" />
