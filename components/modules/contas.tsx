@@ -54,6 +54,7 @@ export function ContasModule() {
   const updateAccount = useStore((s) => s.updateAccount)
   const deleteAccount = useStore((s) => s.deleteAccount)
   const addOpportunity = useStore((s) => s.addOpportunity)
+  const updateOpportunity = useStore((s) => s.updateOpportunity)
   const moveOpportunityStage = useStore((s) => s.moveOpportunityStage)
 
   const [search, setSearch] = useState("")
@@ -558,6 +559,35 @@ export function ContasModule() {
                       </select>
                       <p className="text-xs text-muted-foreground mt-1">Selecione o estagio desejado para a oportunidade.</p>
                     </div>
+
+                    {/* MRR Fields */}
+                    <div className="grid grid-cols-2 gap-4 mt-3">
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">MRR Estimado (R$)</label>
+                        <input
+                          type="number"
+                          min={0}
+                          step={100}
+                          value={opp.mrr_estimado}
+                          onChange={(e) => updateOpportunity(opp.id, { mrr_estimado: Number(e.target.value) || 0 })}
+                          className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                          placeholder="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">MRR Fechado (R$)</label>
+                        <input
+                          type="number"
+                          min={0}
+                          step={100}
+                          value={opp.mrr_fechado}
+                          onChange={(e) => updateOpportunity(opp.id, { mrr_fechado: Number(e.target.value) || 0 })}
+                          className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                          placeholder="0"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">Valores mensais recorrentes da oportunidade.</p>
                   </fieldset>
                 )
               })()}

@@ -98,6 +98,16 @@ export function PipelineModule() {
     [opportunities]
   )
 
+  const mrrAberto = useMemo(
+    () => opportunities.filter((o) => isOppActive(o.estagio) && o.estagio !== "works_fechado").reduce((sum, o) => sum + o.mrr_estimado, 0),
+    [opportunities]
+  )
+
+  const mrrFechado = useMemo(
+    () => opportunities.filter((o) => o.estagio === "works_fechado").reduce((sum, o) => sum + o.mrr_fechado, 0),
+    [opportunities]
+  )
+
   function handleCreate(e: React.FormEvent) {
     e.preventDefault()
     setError("")
@@ -285,6 +295,16 @@ export function PipelineModule() {
           <DollarSign className="w-4 h-4" style={{ color: "var(--fluig-primary)" }} />
           <span className="text-sm text-muted-foreground">MRR Pipeline:</span>
           <span className="text-sm font-bold text-foreground">R$ {pipelineTotal.toLocaleString("pt-BR")}/mes</span>
+        </div>
+        <div className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-card">
+          <DollarSign className="w-4 h-4 text-amber-500" />
+          <span className="text-sm text-muted-foreground">MRR Aberto:</span>
+          <span className="text-sm font-bold text-amber-600 dark:text-amber-400">R$ {mrrAberto.toLocaleString("pt-BR")}/mes</span>
+        </div>
+        <div className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-card">
+          <DollarSign className="w-4 h-4 text-emerald-500" />
+          <span className="text-sm text-muted-foreground">MRR Fechado:</span>
+          <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">R$ {mrrFechado.toLocaleString("pt-BR")}/mes</span>
         </div>
         <div className="flex items-center border border-border rounded-lg overflow-hidden">
           <button
