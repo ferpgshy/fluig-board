@@ -2,8 +2,8 @@ import Link from "next/link"
 import { Orbit, Mail, MessageSquare, Clock, ArrowLeft } from "lucide-react"
 
 export const metadata = {
-  title: "Contato | Fluig Board",
-  description: "Entre em contato com a equipe Fluig Board. Estamos prontos para ajudar.",
+  title: "Contato | Fluig | Ação Comercial",
+  description: "Entre em contato com a equipe Fluig | Ação Comercial. Estamos prontos para ajudar.",
 }
 
 export default function ContatoPage() {
@@ -16,7 +16,7 @@ export default function ContatoPage() {
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#0077b6]">
               <Orbit className="w-4 h-4 text-white" />
             </div>
-            <span className="text-lg font-bold text-foreground">Fluig Board</span>
+            <span className="text-lg font-bold text-foreground">Fluig | Ação Comercial</span>
           </Link>
           <Link
             href="/"

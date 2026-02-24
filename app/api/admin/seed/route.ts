@@ -7,7 +7,7 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}))
     const email = body.email || "fernando.garcia2505@hotmail.com"
     const nome = body.nome || "Admin"
-    const empresa = body.empresa || "Fluig Board"
+    const empresa = body.empresa || "Fluig | Ação Comercial"
     const senha = "TempAdmin2025!"
 
     const admin = createAdminClient()

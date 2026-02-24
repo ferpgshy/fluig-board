@@ -81,7 +81,7 @@ export default function AdminSetupPage() {
           </div>
           <h1 className="text-2xl font-bold text-foreground">Ativar Conta Administrador</h1>
           <p className="text-sm text-muted-foreground">
-            Bem-vindo ao Fluig Board. Complete seus dados para ativar sua conta de administrador.
+            Bem-vindo ao Fluig | Ação Comercial. Complete seus dados para ativar sua conta de administrador.
           </p>
         </div>
 

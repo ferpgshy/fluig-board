@@ -23,7 +23,7 @@ export function Navbar() {
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#0077b6]">
               <Orbit className="w-4.5 h-4.5 text-white" />
             </div>
-            <span className="text-lg font-bold text-foreground">Fluig Board</span>
+            <span className="text-lg font-bold text-foreground">Fluig | Ação Comercial</span>
           </Link>
 
           {/* Desktop links */}

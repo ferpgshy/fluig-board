@@ -185,7 +185,7 @@ export default function AdminPage() {
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#0077b6]">
               <Orbit className="w-4 h-4 text-white" />
             </div>
-            <span className="text-lg font-bold text-foreground">Fluig Board</span>
+            <span className="text-lg font-bold text-foreground">Fluig | Ação Comercial</span>
           </Link>
           <div className="flex items-center gap-2">
             <span className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border"
