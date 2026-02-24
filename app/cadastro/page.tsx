@@ -2,23 +2,21 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { Eye, EyeOff, UserPlus, Loader2 } from "lucide-react"
+import { UserPlus, Loader2, CheckCircle, ArrowLeft } from "lucide-react"
 import { AuthLayout } from "@/components/auth/auth-layout"
-import { createClient } from "@/lib/supabase/client"
 
-export default function CadastroPage() {
-  const router = useRouter()
+export default function SolicitarAcessoPage() {
   const [form, setForm] = useState({
     nome: "",
     email: "",
     empresa: "",
-    password: "",
-    confirmPassword: "",
+    cargo: "",
+    telefone: "",
+    mensagem: "",
   })
-  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [sent, setSent] = useState(false)
 
   function update(field: string, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -27,209 +25,161 @@ export default function CadastroPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError("")
-
-    if (form.password.length < 6) {
-      setError("A senha deve ter no minimo 6 caracteres.")
-      return
-    }
-    if (form.password !== form.confirmPassword) {
-      setError("As senhas nao coincidem.")
-      return
-    }
-
     setLoading(true)
-
     try {
-      const supabase = createClient()
-      const { error: authError } = await supabase.auth.signUp({
-        email: form.email,
-        password: form.password,
-        options: {
-          emailRedirectTo:
-            process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
-            `${window.location.origin}/app`,
-          data: {
-            nome: form.nome,
-            empresa: form.empresa,
-          },
-        },
+      const res = await fetch("/api/access-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
       })
-
-      if (authError) {
-        if (authError.message.includes("already registered")) {
-          throw new Error("Este e-mail ja esta cadastrado.")
-        }
-        throw new Error(authError.message)
-      }
-
-      router.push("/cadastro/sucesso?email=" + encodeURIComponent(form.email))
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Erro ao enviar solicitacao.")
+      setSent(true)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao criar conta")
+      setError(err instanceof Error ? err.message : "Erro ao enviar solicitacao.")
     } finally {
       setLoading(false)
     }
   }
 
+  if (sent) {
+    return (
+      <AuthLayout
+        title="Solicitacao enviada!"
+        subtitle="Em breve um administrador avaliara seu pedido."
+      >
+        <div className="text-center py-6 space-y-4">
+          <div
+            className="mx-auto w-16 h-16 rounded-full flex items-center justify-center"
+            style={{ backgroundColor: "rgba(0,168,168,0.1)" }}
+          >
+            <CheckCircle className="w-8 h-8" style={{ color: "var(--fluig-secondary)" }} />
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Sua solicitacao foi recebida para <strong className="text-foreground">{form.email}</strong>.
+            Voce recebera as instrucoes de acesso por e-mail assim que aprovada.
+          </p>
+          <Link
+            href="/login"
+            className="inline-flex items-center gap-2 text-sm font-medium"
+            style={{ color: "var(--fluig-primary)" }}
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Voltar para o login
+          </Link>
+        </div>
+      </AuthLayout>
+    )
+  }
+
   return (
     <AuthLayout
-      title="Criar sua conta"
-      subtitle="Preencha os dados abaixo para comecar a usar o Fluig Board."
+      title="Solicitar acesso"
+      subtitle="Preencha o formulario e aguarde a aprovacao do administrador."
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-foreground">
+              Nome completo <span className="text-destructive">*</span>
+            </label>
+            <input
+              type="text"
+              value={form.nome}
+              onChange={(e) => update("nome", e.target.value)}
+              placeholder="Seu nome"
+              required
+              className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-foreground">
+              E-mail corporativo <span className="text-destructive">*</span>
+            </label>
+            <input
+              type="email"
+              value={form.email}
+              onChange={(e) => update("email", e.target.value)}
+              placeholder="nome@empresa.com"
+              required
+              className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-foreground">
+              Empresa <span className="text-destructive">*</span>
+            </label>
+            <input
+              type="text"
+              value={form.empresa}
+              onChange={(e) => update("empresa", e.target.value)}
+              placeholder="Nome da empresa"
+              required
+              className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-foreground">Cargo</label>
+            <input
+              type="text"
+              value={form.cargo}
+              onChange={(e) => update("cargo", e.target.value)}
+              placeholder="Ex: Gerente Comercial"
+              className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="block text-sm font-medium text-foreground">Telefone / WhatsApp</label>
+          <input
+            type="tel"
+            value={form.telefone}
+            onChange={(e) => update("telefone", e.target.value)}
+            placeholder="(11) 99999-9999"
+            className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="block text-sm font-medium text-foreground">
+            Por que deseja acesso?{" "}
+            <span className="text-muted-foreground font-normal">(opcional)</span>
+          </label>
+          <textarea
+            value={form.mensagem}
+            onChange={(e) => update("mensagem", e.target.value)}
+            placeholder="Descreva brevemente o motivo..."
+            rows={3}
+            className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+          />
+        </div>
+
         {error && (
-          <div className="px-4 py-3 rounded-lg text-sm font-medium bg-destructive/10 text-destructive border border-destructive/20">
+          <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive">
             {error}
           </div>
         )}
 
-        {/* Nome */}
-        <div className="space-y-1.5">
-          <label htmlFor="nome" className="block text-sm font-medium text-foreground">
-            Nome completo
-          </label>
-          <input
-            id="nome"
-            type="text"
-            required
-            autoComplete="name"
-            placeholder="Seu nome"
-            value={form.nome}
-            onChange={(e) => update("nome", e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-shadow"
-          />
-        </div>
-
-        {/* Email */}
-        <div className="space-y-1.5">
-          <label htmlFor="email" className="block text-sm font-medium text-foreground">
-            E-mail corporativo
-          </label>
-          <input
-            id="email"
-            type="email"
-            required
-            autoComplete="email"
-            placeholder="voce@empresa.com.br"
-            value={form.email}
-            onChange={(e) => update("email", e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-shadow"
-          />
-        </div>
-
-        {/* Empresa */}
-        <div className="space-y-1.5">
-          <label htmlFor="empresa" className="block text-sm font-medium text-foreground">
-            Empresa
-          </label>
-          <input
-            id="empresa"
-            type="text"
-            required
-            placeholder="Nome da sua empresa"
-            value={form.empresa}
-            onChange={(e) => update("empresa", e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-shadow"
-          />
-        </div>
-
-        {/* Password */}
-        <div className="space-y-1.5">
-          <label htmlFor="password" className="block text-sm font-medium text-foreground">
-            Senha
-          </label>
-          <div className="relative">
-            <input
-              id="password"
-              type={showPassword ? "text" : "password"}
-              required
-              autoComplete="new-password"
-              placeholder="Minimo 6 caracteres"
-              value={form.password}
-              onChange={(e) => update("password", e.target.value)}
-              className="w-full px-3.5 py-2.5 pr-11 rounded-lg border border-border bg-card text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-shadow"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-              aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-            >
-              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
-          </div>
-          {/* Strength indicator */}
-          {form.password.length > 0 && (
-            <div className="flex items-center gap-2 mt-1.5">
-              <div className="flex-1 flex gap-1">
-                {[1, 2, 3, 4].map((level) => {
-                  const strength =
-                    form.password.length >= 12 && /[A-Z]/.test(form.password) && /[0-9]/.test(form.password) && /[^a-zA-Z0-9]/.test(form.password) ? 4
-                    : form.password.length >= 8 && /[A-Z]/.test(form.password) && /[0-9]/.test(form.password) ? 3
-                    : form.password.length >= 6 ? 2 : 1
-                  const colors = ["var(--fluig-danger)", "var(--fluig-danger)", "#f59e0b", "var(--fluig-success)"]
-                  return (
-                    <div
-                      key={level}
-                      className="h-1 flex-1 rounded-full transition-colors"
-                      style={{
-                        backgroundColor: level <= strength ? colors[strength - 1] : "var(--border)",
-                      }}
-                    />
-                  )
-                })}
-              </div>
-              <span className="text-[11px] text-muted-foreground">
-                {form.password.length < 6 ? "Fraca" : form.password.length < 8 ? "Razoavel" : form.password.length < 12 ? "Boa" : "Forte"}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Confirm password */}
-        <div className="space-y-1.5">
-          <label htmlFor="confirmPassword" className="block text-sm font-medium text-foreground">
-            Confirmar senha
-          </label>
-          <input
-            id="confirmPassword"
-            type={showPassword ? "text" : "password"}
-            required
-            autoComplete="new-password"
-            placeholder="Repita a senha"
-            value={form.confirmPassword}
-            onChange={(e) => update("confirmPassword", e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-shadow"
-          />
-          {form.confirmPassword.length > 0 && form.password !== form.confirmPassword && (
-            <p className="text-xs" style={{ color: "var(--fluig-danger)" }}>As senhas nao coincidem.</p>
-          )}
-        </div>
-
-        {/* Submit */}
         <button
           type="submit"
           disabled={loading}
-          className="w-full flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-colors disabled:opacity-60 mt-2"
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold text-white transition-opacity disabled:opacity-60"
           style={{ backgroundColor: "var(--fluig-primary)" }}
-          onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = "#005f8f")}
-          onMouseLeave={(e) => !loading && (e.currentTarget.style.backgroundColor = "var(--fluig-primary)")}
         >
           {loading ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <><Loader2 className="w-4 h-4 animate-spin" /> Enviando...</>
           ) : (
-            <UserPlus className="w-4 h-4" />
+            <><UserPlus className="w-4 h-4" /> Enviar Solicitacao</>
           )}
-          {loading ? "Criando conta..." : "Criar conta"}
         </button>
 
-        {/* Login link */}
-        <p className="text-center text-sm text-muted-foreground pt-1">
-          {"Ja tem uma conta? "}
-          <Link
-            href="/login"
-            className="font-semibold hover:underline"
-            style={{ color: "var(--fluig-primary)" }}
-          >
+        <p className="text-center text-sm text-muted-foreground">
+          Ja tem acesso?{" "}
+          <Link href="/login" className="font-semibold hover:underline" style={{ color: "var(--fluig-primary)" }}>
             Fazer login
           </Link>
         </p>

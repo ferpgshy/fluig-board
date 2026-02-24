@@ -47,6 +47,49 @@ export async function GET() {
   }
 }
 
+// POST /api/admin/users — Admin cria usuario diretamente
+export async function POST(request: Request) {
+  try {
+    const user = await verifyAdmin()
+    if (!user) return NextResponse.json({ error: "Acesso negado." }, { status: 403 })
+
+    const body = await request.json()
+    const { nome, email, empresa, cargo } = body
+
+    if (!nome || !email || !empresa) {
+      return NextResponse.json({ error: "Nome, e-mail e empresa sao obrigatorios." }, { status: 400 })
+    }
+
+    const adminDb = createAdminClient()
+    const tempPassword = `Fluig@${Math.random().toString(36).slice(2, 8).toUpperCase()}!`
+
+    const { data: newUser, error: createError } = await adminDb.auth.admin.createUser({
+      email: email.trim().toLowerCase(),
+      password: tempPassword,
+      email_confirm: true,
+      user_metadata: { nome: nome.trim(), empresa: empresa.trim() },
+    })
+
+    if (createError) return NextResponse.json({ error: createError.message }, { status: 400 })
+
+    const userId = newUser.user?.id
+    if (userId) {
+      await adminDb.from("profiles").update({
+        nome: nome.trim(),
+        email: email.trim().toLowerCase(),
+        empresa: empresa.trim(),
+        cargo: cargo?.trim() || "",
+        role: "user",
+        ativado: true,
+      }).eq("id", userId)
+    }
+
+    return NextResponse.json({ success: true, email: email.trim().toLowerCase(), senha_temp: tempPassword })
+  } catch {
+    return NextResponse.json({ error: "Erro interno." }, { status: 500 })
+  }
+}
+
 // PATCH /api/admin/users — Atualiza role ou ativado de um usuario (apenas admin)
 export async function PATCH(request: Request) {
   try {
@@ -56,14 +99,16 @@ export async function PATCH(request: Request) {
     }
 
     const body = await request.json()
-    const { userId, role, ativado } = body
+    // suporta `id` ou `userId` para compatibilidade
+    const targetId = body.id || body.userId
+    const { role, ativado } = body
 
-    if (!userId) {
-      return NextResponse.json({ error: "userId e obrigatorio." }, { status: 400 })
+    if (!targetId) {
+      return NextResponse.json({ error: "ID do usuario e obrigatorio." }, { status: 400 })
     }
 
     // Nao pode desativar a si mesmo
-    if (userId === user.id && ativado === false) {
+    if (targetId === user.id && ativado === false) {
       return NextResponse.json({ error: "Voce nao pode desativar a si mesmo." }, { status: 400 })
     }
 
@@ -75,7 +120,7 @@ export async function PATCH(request: Request) {
     const { error: updateError } = await adminDb
       .from("profiles")
       .update(updates)
-      .eq("id", userId)
+      .eq("id", targetId)
 
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 500 })

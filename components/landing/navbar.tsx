@@ -51,7 +51,7 @@ export function Navbar() {
               href="/cadastro"
               className="inline-flex items-center justify-center rounded-lg px-5 py-2.5 text-sm font-semibold bg-[#0077b6] text-white hover:bg-[#0077b6]/90 transition-colors"
             >
-              Criar Conta
+              Solicitar Acesso
             </Link>
           </div>
 
@@ -93,7 +93,7 @@ export function Navbar() {
               className="block w-full text-center rounded-lg px-5 py-2.5 text-sm font-semibold bg-[#0077b6] text-white hover:bg-[#0077b6]/90 transition-colors mt-2"
               onClick={() => setMobileOpen(false)}
             >
-              Criar Conta
+              Solicitar Acesso
             </Link>
           </div>
         </div>
