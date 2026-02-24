@@ -9,7 +9,6 @@ export async function GET() {
   const { data, error } = await supabase
     .from("reports")
     .select("*")
-    .eq("user_id", user.id)
     .order("criado_em", { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

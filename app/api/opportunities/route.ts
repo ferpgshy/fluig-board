@@ -9,7 +9,6 @@ export async function GET() {
   const { data, error } = await supabase
     .from("opportunities")
     .select("*")
-    .eq("user_id", user.id)
     .order("criado_em", { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -28,7 +27,6 @@ export async function POST(request: Request) {
     .from("opportunities")
     .select("id")
     .eq("account_id", body.account_id)
-    .eq("user_id", user.id)
     .not("estagio", "in", '("works_fechado","perdido")')
     .maybeSingle()
 
