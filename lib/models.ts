@@ -170,6 +170,13 @@ export function canAdvanceStage(from: OppStage, to: OppStage): boolean {
   return toIdx > fromIdx // só avançar
 }
 
+export function canRegressStage(from: OppStage): OppStage | null {
+  if (from === "perdido" || from === "works_fechado") return null
+  const fromIdx = OPP_STAGE_ORDER.indexOf(from)
+  if (fromIdx <= 0) return null // já está no primeiro estágio
+  return OPP_STAGE_ORDER[fromIdx - 1]
+}
+
 // Score label descriptions per dimension
 export const SCORE_LABELS: Record<string, string[]> = {
   score_potencial: ["Nenhum", "Muito baixo", "Baixo", "Médio", "Alto", "Muito alto"],

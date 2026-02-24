@@ -12,9 +12,12 @@ import {
   calcTier,
   calcOnda,
   OPP_STAGE_LABELS,
+  OPP_STAGE_ORDER,
   isOppActive,
+  canRegressStage,
   SCORE_DIMENSIONS,
   SCORE_LABELS,
+  type OppStage,
 } from "@/lib/models"
 import { SectionHeader } from "@/components/fluig/section-header"
 import { TierBadge } from "@/components/fluig/tier-badge"
@@ -49,6 +52,7 @@ export function ContasModule() {
   const addAccount = useStore((s) => s.addAccount)
   const updateAccount = useStore((s) => s.updateAccount)
   const deleteAccount = useStore((s) => s.deleteAccount)
+  const moveOpportunityStage = useStore((s) => s.moveOpportunityStage)
 
   const [search, setSearch] = useState("")
   const [filterTier, setFilterTier] = useState<Tier | "todos">("todos")
@@ -437,6 +441,45 @@ export function ContasModule() {
                   )}
                 </div>
               </fieldset>
+
+              {/* Estagio Opp - only in edit mode */}
+              {editingAccount && (() => {
+                const opp = opportunities.find((o) => o.account_id === editingAccount.id && isOppActive(o.estagio))
+                if (!opp) return (
+                  <div className="p-3 rounded-lg bg-muted/50 border border-border">
+                    <p className="text-sm text-muted-foreground">Nenhuma oportunidade ativa vinculada a esta conta.</p>
+                  </div>
+                )
+                const currentIdx = OPP_STAGE_ORDER.indexOf(opp.estagio)
+                return (
+                  <fieldset className="space-y-3">
+                    <legend className="text-sm font-semibold mb-2" style={{ color: "var(--fluig-title)" }}>Estagio da Oportunidade</legend>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1">Estagio Atual</label>
+                      <select
+                        value={opp.estagio}
+                        onChange={(e) => {
+                          const newStage = e.target.value as OppStage
+                          moveOpportunityStage(opp.id, newStage)
+                        }}
+                        className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                      >
+                        {/* Allow current, previous (1 step), and next (1 step) */}
+                        {OPP_STAGE_ORDER.map((stage, idx) => {
+                          const diff = idx - currentIdx
+                          const allowed = diff === 0 || diff === 1 || diff === -1
+                          return (
+                            <option key={stage} value={stage} disabled={!allowed}>
+                              {OPP_STAGE_LABELS[stage]}{diff === 0 ? " (atual)" : !allowed ? " (bloqueado)" : ""}
+                            </option>
+                          )
+                        })}
+                      </select>
+                      <p className="text-xs text-muted-foreground mt-1">Permite avancar ou voltar uma etapa por vez.</p>
+                    </div>
+                  </fieldset>
+                )
+              })()}
 
               {/* Scoring - 5 sliders */}
               <fieldset className="space-y-3">

@@ -12,7 +12,9 @@ import {
   calcTier,
   calcOnda,
   canAdvanceStage,
+  canRegressStage,
   isOppActive,
+  OPP_STAGE_ORDER,
 } from "./models"
 
 type AccountInput = Omit<Account, "id" | "score_total" | "tier" | "onda" | "criado_em" | "atualizado_em">
@@ -132,7 +134,10 @@ export const useStore = create<AppState>()(
         const state = get()
         const opp = state.opportunities.find((o) => o.id === id)
         if (!opp) return false
-        if (!canAdvanceStage(opp.estagio, newStage)) return false
+
+        // Allow advance OR regress by exactly 1 step
+        const isRegressing = canRegressStage(opp.estagio) === newStage
+        if (!isRegressing && !canAdvanceStage(opp.estagio, newStage)) return false
 
         const now = new Date().toISOString()
         const updates: Partial<Opportunity> = {
