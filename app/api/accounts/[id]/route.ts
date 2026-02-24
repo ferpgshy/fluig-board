@@ -30,7 +30,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     .from("accounts")
     .update(updates)
     .eq("id", id)
-    .eq("user_id", user.id)
     .select()
     .single()
 
@@ -44,7 +43,7 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ id: str
   if (!user) return NextResponse.json({ error: "Nao autenticado." }, { status: 401 })
 
   const { id } = await params
-  const { error } = await supabase.from("accounts").delete().eq("id", id).eq("user_id", user.id)
+  const { error } = await supabase.from("accounts").delete().eq("id", id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
 }

@@ -28,7 +28,7 @@ import { ptBR } from "date-fns/locale"
 const SEGMENTOS: Segmento[] = ["Indústria", "Serviços", "Varejo", "Saúde", "Outro"]
 const PORTES: Porte[] = ["PME", "Mid-Market", "Enterprise"]
 
-const emptyForm = (): Omit<Account, "id" | "score_total" | "tier" | "onda" | "criado_em" | "atualizado_em"> => ({
+const emptyForm = (): Omit<Account, "id" | "score_total" | "tier" | "onda" | "criado_em" | "atualizado_em"> & { estagio_inicial?: OppStage } => ({
   nome: "",
   segmento: "Serviços" as Segmento,
   porte: "PME" as Porte,
@@ -44,6 +44,7 @@ const emptyForm = (): Omit<Account, "id" | "score_total" | "tier" | "onda" | "cr
   score_risco_churn: 3,
   score_acesso: 3,
   observacoes: "",
+  estagio_inicial: "selecionado" as OppStage,
 })
 
 export function ContasModule() {
@@ -52,7 +53,7 @@ export function ContasModule() {
   const addAccount = useStore((s) => s.addAccount)
   const updateAccount = useStore((s) => s.updateAccount)
   const deleteAccount = useStore((s) => s.deleteAccount)
-  const moveOpportunityStage = useStore((s) => s.moveOpportunityStage)
+  const addOpportunity = useStore((s) => s.addOpportunity)
 
   const [search, setSearch] = useState("")
   const [filterTier, setFilterTier] = useState<Tier | "todos">("todos")
@@ -65,6 +66,7 @@ export function ContasModule() {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
 
   const [form, setForm] = useState(emptyForm())
+  const [creatingOpp, setCreatingOpp] = useState(false)
 
   // Sorted by score_total DESC as default
   const filtered = useMemo(() => {
@@ -119,11 +121,36 @@ export function ContasModule() {
     e.preventDefault()
     if (editingAccount) {
       updateAccount(editingAccount.id, form)
+      setDrawerOpen(false)
+      resetForm()
     } else {
-      addAccount(form)
+      // Criar conta + oportunidade
+      setCreatingOpp(true)
+      const { estagio_inicial, ...accountData } = form
+      addAccount(accountData).then((newAccount) => {
+        if (newAccount) {
+          // Criar oportunidade automaticamente
+          addOpportunity({
+            account_id: newAccount.id,
+            estagio: estagio_inicial || "selecionado",
+            mrr_estimado: 0,
+            mrr_fechado: 0,
+            pacote_works: "Essencial",
+            data_contato: "",
+            data_visita: "",
+            data_proposta: "",
+            data_fechamento: "",
+            motivo_perda: "",
+            proximo_passo: "",
+            data_proximo_passo: "",
+            responsavel: "Camila",
+          })
+        }
+        setDrawerOpen(false)
+        resetForm()
+        setCreatingOpp(false)
+      })
     }
-    setDrawerOpen(false)
-    resetForm()
   }
 
   function handleDelete(id: string) {
@@ -391,6 +418,22 @@ export function ContasModule() {
                 </div>
               </fieldset>
 
+              {/* Estagio inicial (apenas na criacao) */}
+              {!editingAccount && (
+                <fieldset className="space-y-3">
+                  <legend className="text-sm font-semibold text-fluig-title mb-2">Pipeline Inicial</legend>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">Estagio Inicial da Oportunidade</label>
+                    <select value={form.estagio_inicial || "selecionado"} onChange={(e) => setForm({ ...form, estagio_inicial: e.target.value as OppStage })} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+                      {OPP_STAGE_ORDER.map((stage) => (
+                        <option key={stage} value={stage}>{OPP_STAGE_LABELS[stage]}</option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-muted-foreground mt-1">Ao criar esta conta, uma oportunidade sera criada automaticamente neste estagio.</p>
+                  </div>
+                </fieldset>
+              )}
+
               {/* Contact */}
               <fieldset className="space-y-3">
                 <legend className="text-sm font-semibold text-fluig-title mb-2">Contato / Sponsor</legend>
@@ -514,8 +557,8 @@ export function ContasModule() {
                 <textarea value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} rows={3} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none" />
               </div>
 
-              <button type="submit" className="w-full mt-2 px-4 py-2.5 rounded-lg bg-fluig-primary text-primary-foreground font-medium text-sm hover:opacity-90 transition-opacity">
-                {editingAccount ? "Salvar Alteracoes" : "Criar Conta"}
+              <button type="submit" disabled={creatingOpp} className="w-full mt-2 px-4 py-2.5 rounded-lg bg-fluig-primary text-primary-foreground font-medium text-sm hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed">
+                {editingAccount ? "Salvar Alteracoes" : creatingOpp ? "Criando Conta e Oportunidade..." : "Criar Conta + Oportunidade"}
               </button>
             </form>
           </div>
