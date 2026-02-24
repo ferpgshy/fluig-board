@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { NextResponse } from "next/server"
 
 // POST /api/admin/setup — Ativa o admin: define nome, telefone, empresa
@@ -13,7 +14,7 @@ export async function POST(request: Request) {
 
     const supabase = await createClient()
 
-    // Verifica se o usuario logado existe e e admin
+    // Verifica se o usuario logado existe
     const {
       data: { user },
     } = await supabase.auth.getUser()
@@ -22,8 +23,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Nao autenticado." }, { status: 401 })
     }
 
+    // Usa admin client para bypassar RLS
+    const adminDb = createAdminClient()
+
     // Busca o profile
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await adminDb
       .from("profiles")
       .select("*")
       .eq("id", user.id)
@@ -41,8 +45,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Admin ja ativado." }, { status: 400 })
     }
 
-    // Atualiza o profile do admin
-    const { error: updateError } = await supabase
+    // Atualiza o profile do admin via admin client
+    const { error: updateError } = await adminDb
       .from("profiles")
       .update({
         nome: nome.trim(),
