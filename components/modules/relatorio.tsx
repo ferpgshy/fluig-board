@@ -13,6 +13,8 @@ import {
   Pencil,
   ChevronRight,
   FileSpreadsheet,
+  Trash2,
+  Search,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { format } from "date-fns"
@@ -31,9 +33,14 @@ export function RelatorioModule() {
   const reports = useStore((s) => s.reports)
   const updateReport = useStore((s) => s.updateReport)
   const advanceReportStatus = useStore((s) => s.advanceReportStatus)
+  const deleteReport = useStore((s) => s.deleteReport)
 
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<Partial<ReportDraft>>({})
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [search, setSearch] = useState("")
+  const [filterStatus, setFilterStatus] = useState<ReportStatus | "todos">("todos")
+  const [filterTipo, setFilterTipo] = useState<ReportTipo | "todos">("todos")
 
   const getAccount = (id: string) => accounts.find((a) => a.id === id)
   const getVisit = (id: string) => visits.find((v) => v.id === id)
@@ -234,8 +241,19 @@ export function RelatorioModule() {
   }
 
   const sortedReports = useMemo(
-    () => [...reports].sort((a, b) => new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime()),
-    [reports]
+    () => [...reports]
+      .filter((r) => {
+        if (search) {
+          const account = getAccount(r.account_id)
+          const term = search.toLowerCase()
+          if (!account?.nome.toLowerCase().includes(term) && !r.titulo.toLowerCase().includes(term)) return false
+        }
+        if (filterStatus !== "todos" && r.status !== filterStatus) return false
+        if (filterTipo !== "todos" && r.tipo !== filterTipo) return false
+        return true
+      })
+      .sort((a, b) => new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime()),
+    [reports, search, filterStatus, filterTipo, accounts]
   )
 
   return (
@@ -256,6 +274,39 @@ export function RelatorioModule() {
           </button>
         </div>
       )}
+
+      {/* Search & Filters */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-6">
+        <div className="relative sm:col-span-2">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Buscar por conta ou titulo..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+        </div>
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value as ReportStatus | "todos")}
+          className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="todos">Status: Todos</option>
+          <option value="Rascunho">Rascunho</option>
+          <option value="Revisão">Revisão</option>
+          <option value="Enviado">Enviado</option>
+        </select>
+        <select
+          value={filterTipo}
+          onChange={(e) => setFilterTipo(e.target.value as ReportTipo | "todos")}
+          className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="todos">Tipo: Todos</option>
+          <option value="Relatorio_Executivo">Relatorio Executivo</option>
+          <option value="Proposta_Works">Proposta Works</option>
+        </select>
+      </div>
 
       {sortedReports.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 gap-4 rounded-xl border border-border bg-card">
@@ -413,6 +464,30 @@ export function RelatorioModule() {
                         >
                           <FileSpreadsheet className="w-4 h-4" /> Exportar CSV
                         </button>
+                        {confirmDeleteId === report.id ? (
+                          <div className="flex items-center gap-2 ml-auto">
+                            <span className="text-xs text-muted-foreground">Confirmar exclusao?</span>
+                            <button
+                              onClick={() => { deleteReport(report.id); setConfirmDeleteId(null) }}
+                              className="flex items-center gap-1 px-3 py-2 rounded-lg bg-destructive text-destructive-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+                            >
+                              <Trash2 className="w-3 h-3" /> Sim
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeleteId(null)}
+                              className="px-3 py-2 rounded-lg border border-border bg-card text-foreground text-sm hover:bg-muted transition-colors"
+                            >
+                              Nao
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setConfirmDeleteId(report.id)}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-destructive/50 text-destructive text-sm font-medium hover:bg-destructive/10 transition-colors ml-auto"
+                          >
+                            <Trash2 className="w-4 h-4" /> Excluir
+                          </button>
+                        )}
                       </div>
                     </>
                   )}

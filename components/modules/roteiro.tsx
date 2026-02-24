@@ -13,6 +13,8 @@ import {
 } from "@/lib/models"
 import { SectionHeader } from "@/components/fluig/section-header"
 import { TierBadge } from "@/components/fluig/tier-badge"
+import { format } from "date-fns"
+import { ptBR } from "date-fns/locale"
 import {
   ClipboardList,
   Cog,
@@ -25,6 +27,8 @@ import {
   Check,
   Save,
   Info,
+  Trash2,
+  Search,
 } from "lucide-react"
 
 const AUTOMACAO_NIVEIS: AutomacaoNivel[] = ["Nenhuma", "Básica", "Intermediária", "Avançada"]
@@ -65,6 +69,7 @@ export function RoteiroModule() {
   const reports = useStore((s) => s.reports)
   const addVisit = useStore((s) => s.addVisit)
   const updateVisit = useStore((s) => s.updateVisit)
+  const deleteVisit = useStore((s) => s.deleteVisit)
   const addReport = useStore((s) => s.addReport)
 
   const [step, setStep] = useState(-1) // -1 = select
@@ -76,12 +81,26 @@ export function RoteiroModule() {
   const [success, setSuccess] = useState(false)
   const [reportError, setReportError] = useState("")
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [visitSearch, setVisitSearch] = useState("")
+  const [confirmDeleteVisitId, setConfirmDeleteVisitId] = useState<string | null>(null)
 
   const eligibleAccounts = useMemo(() => {
     const activeOpps = opportunities.filter((o) => isOppActive(o.estagio))
     const accountIds = new Set(activeOpps.map((o) => o.account_id))
     return accounts.filter((a) => accountIds.has(a.id))
   }, [accounts, opportunities])
+
+  const filteredVisits = useMemo(() => {
+    return [...visits]
+      .filter((v) => {
+        if (visitSearch) {
+          const account = accounts.find((a) => a.id === v.account_id)
+          if (!account?.nome.toLowerCase().includes(visitSearch.toLowerCase())) return false
+        }
+        return true
+      })
+      .sort((a, b) => new Date(b.criado_em).getTime() - new Date(a.criado_em).getTime())
+  }, [visits, visitSearch, accounts])
 
   const selectedAccount = accounts.find((a) => a.id === selectedAccountId)
   const selectedOpp = opportunities.find((o) => o.id === selectedOppId)
@@ -452,6 +471,86 @@ export function RoteiroModule() {
             <button onClick={handleGenerate} className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-fluig-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">
               <FileText className="w-4 h-4" /> Gerar Rascunho
             </button>
+          )}
+        </div>
+      )}
+
+      {/* Historico de Visitas */}
+      {step === -1 && visits.length > 0 && (
+        <div className="mt-8">
+          <h3 className="text-base font-semibold text-fluig-title mb-4">Historico de Visitas</h3>
+
+          {/* Search */}
+          <div className="relative mb-4 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Buscar por conta..."
+              value={visitSearch}
+              onChange={(e) => setVisitSearch(e.target.value)}
+              className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+
+          {filteredVisits.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">Nenhuma visita encontrada.</p>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {filteredVisits.map((visit) => {
+                const account = accounts.find((a) => a.id === visit.account_id)
+                const hasReport = reports.some((r) => r.visit_id === visit.id)
+                return (
+                  <div key={visit.id} className="rounded-xl border border-border bg-card p-4">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-3">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-medium text-foreground text-sm">{account?.nome ?? "Conta removida"}</p>
+                            {account && <TierBadge tier={account.tier} />}
+                            {hasReport && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-fluig-success/20 text-fluig-success font-medium">Relatorio gerado</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                            <span>{format(new Date(visit.data_visita), "dd/MM/yyyy", { locale: ptBR })}</span>
+                            <span>{visit.modalidade}</span>
+                            {visit.participantes_cliente && <span>Participantes: {visit.participantes_cliente}</span>}
+                            {visit.dx_automacao_nivel && visit.dx_automacao_nivel !== "Nenhuma" && <span>Automacao: {visit.dx_automacao_nivel}</span>}
+                            {visit.dx_sponsor_engajamento && <span>Sponsor: {visit.dx_sponsor_engajamento}</span>}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {confirmDeleteVisitId === visit.id ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">Confirmar?</span>
+                            <button
+                              onClick={() => { deleteVisit(visit.id); setConfirmDeleteVisitId(null) }}
+                              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-destructive text-destructive-foreground text-xs font-medium hover:opacity-90 transition-opacity"
+                            >
+                              <Trash2 className="w-3 h-3" /> Sim
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeleteVisitId(null)}
+                              className="px-3 py-1.5 rounded-lg border border-border bg-card text-foreground text-xs hover:bg-muted transition-colors"
+                            >
+                              Nao
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setConfirmDeleteVisitId(visit.id)}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-destructive/50 text-destructive text-xs font-medium hover:bg-destructive/10 transition-colors"
+                          >
+                            <Trash2 className="w-3 h-3" /> Excluir
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           )}
         </div>
       )}

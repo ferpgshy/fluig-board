@@ -48,11 +48,13 @@ interface AppState {
   // Visit
   addVisit: (data: VisitInput) => Promise<string>
   updateVisit: (id: string, data: Partial<Omit<Visit, "id" | "criado_em">>) => Promise<void>
+  deleteVisit: (id: string) => Promise<void>
 
   // Report
   addReport: (data: Omit<ReportDraft, "id" | "criado_em" | "atualizado_em" | "status">) => Promise<string | null>
   updateReport: (id: string, data: Partial<Omit<ReportDraft, "id" | "criado_em">>) => Promise<void>
   advanceReportStatus: (id: string) => Promise<void>
+  deleteReport: (id: string) => Promise<void>
 }
 
 export const useStore = create<AppState>()((set, get) => ({
@@ -262,6 +264,16 @@ export const useStore = create<AppState>()((set, get) => ({
     }
   },
 
+  deleteVisit: async (id) => {
+    const backup = { visits: get().visits, reports: get().reports }
+    set((s) => ({
+      visits: s.visits.filter((v) => v.id !== id),
+      reports: s.reports.filter((r) => r.visit_id !== id),
+    }))
+    const res = await fetch(`/api/visits/${id}`, { method: "DELETE" })
+    if (!res.ok) set(backup)
+  },
+
   // === REPORT ===
   addReport: async (data) => {
     const res = await fetch("/api/reports", {
@@ -318,5 +330,12 @@ export const useStore = create<AppState>()((set, get) => ({
       const { report } = await res.json()
       set((s) => ({ reports: s.reports.map((r) => (r.id === id ? report : r)) }))
     }
+  },
+
+  deleteReport: async (id) => {
+    const backup = get().reports
+    set((s) => ({ reports: s.reports.filter((r) => r.id !== id) }))
+    const res = await fetch(`/api/reports/${id}`, { method: "DELETE" })
+    if (!res.ok) set({ reports: backup })
   },
 }))
