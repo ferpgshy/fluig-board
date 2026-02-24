@@ -28,8 +28,8 @@ const DIFFS = [
   },
   {
     icon: Database,
-    title: "Persistencia local segura",
-    description: "Dados armazenados localmente com Zustand persist. Sem risco de perda durante a sessao de trabalho.",
+    title: "Dados em nuvem com seguranca",
+    description: "Dados armazenados no Supabase com RLS por usuario. Acesso seguro de qualquer dispositivo, sem risco de perda.",
   },
 ]
 

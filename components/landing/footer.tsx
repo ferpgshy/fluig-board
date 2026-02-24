@@ -9,16 +9,16 @@ const LINKS = {
     { label: "Dashboard", href: "#funcionalidades" },
   ],
   Empresa: [
-    { label: "Sobre nos", href: "#" },
-    { label: "Carreiras", href: "#" },
-    { label: "Blog", href: "#" },
-    { label: "Contato", href: "#" },
+    { label: "Sobre nos", href: "#diferenciais" },
+    { label: "Como Funciona", href: "#como-funciona" },
+    { label: "Solicitar Acesso", href: "/cadastro" },
+    { label: "Entrar", href: "/login" },
   ],
   Suporte: [
-    { label: "Central de Ajuda", href: "#" },
-    { label: "Documentacao", href: "#" },
-    { label: "Status", href: "#" },
-    { label: "Termos de Uso", href: "#" },
+    { label: "Solicitar Acesso", href: "/cadastro" },
+    { label: "Login", href: "/login" },
+    { label: "Contato", href: "mailto:contato@fluigboard.com.br" },
+    { label: "Politica de Privacidade", href: "#" },
   ],
 }
 
@@ -38,9 +38,12 @@ export function FooterSection() {
             <p className="text-sm text-white/60 leading-relaxed max-w-sm mb-6">
               Plataforma estrategica de gestao de contas, pipeline inteligente, roteiro consultivo e relatorios executivos para equipes comerciais de alta performance.
             </p>
-            <div className="flex items-center gap-2 text-sm text-white/40">
-              <span>contato@fluigboard.com.br</span>
-            </div>
+            <a
+              href="mailto:contato@fluigboard.com.br"
+              className="flex items-center gap-2 text-sm text-white/40 hover:text-white/70 transition-colors"
+            >
+              contato@fluigboard.com.br
+            </a>
           </div>
 
           {/* Link columns */}

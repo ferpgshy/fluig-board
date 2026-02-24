@@ -18,10 +18,10 @@ export function CtaSection() {
           Agende uma demonstracao personalizada e descubra como o Fluig Board pode elevar a maturidade da sua operacao comercial com inteligencia e governanca.
         </p>
         <Link
-          href="/app"
+          href="/cadastro"
           className="inline-flex items-center justify-center gap-3 rounded-lg px-10 py-5 text-lg font-semibold bg-white text-[#0077b6] hover:bg-white/90 transition-colors shadow-xl hover:shadow-2xl"
         >
-          Agendar Demonstracao
+          Solicitar Acesso
           <ArrowRight className="w-5 h-5" />
         </Link>
       </div>

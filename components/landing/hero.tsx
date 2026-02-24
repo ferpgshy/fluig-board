@@ -32,10 +32,10 @@ export function HeroSection() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <Link
-                href="/app"
+                href="/cadastro"
                 className="inline-flex items-center justify-center gap-2 rounded-lg px-8 py-4 text-base font-semibold bg-white text-[#0077b6] hover:bg-white/90 transition-colors shadow-lg"
               >
-                Solicitar Demonstracao
+                Solicitar Acesso
                 <ArrowRight className="w-5 h-5" />
               </Link>
               <a
