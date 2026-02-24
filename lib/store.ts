@@ -192,8 +192,8 @@ export const useStore = create<AppState>()((set, get) => ({
     const opp = state.opportunities.find((o) => o.id === id)
     if (!opp) return false
 
-    const isRegressing = canRegressStage(opp.estagio) === newStage
-    if (!isRegressing && !canAdvanceStage(opp.estagio, newStage)) return false
+    // Permitir mover para qualquer estagio
+    if (opp.estagio === newStage) return true
 
     const now = new Date().toISOString()
     const updates: Partial<Opportunity> = { estagio: newStage, atualizado_em: now }

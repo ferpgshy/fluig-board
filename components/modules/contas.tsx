@@ -507,18 +507,16 @@ export function ContasModule() {
                         }}
                         className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                       >
-                        {/* Allow current, previous (1 step), and next (1 step) */}
                         {OPP_STAGE_ORDER.map((stage, idx) => {
                           const diff = idx - currentIdx
-                          const allowed = diff === 0 || diff === 1 || diff === -1
                           return (
-                            <option key={stage} value={stage} disabled={!allowed}>
-                              {OPP_STAGE_LABELS[stage]}{diff === 0 ? " (atual)" : !allowed ? " (bloqueado)" : ""}
+                            <option key={stage} value={stage}>
+                              {OPP_STAGE_LABELS[stage]}{diff === 0 ? " (atual)" : ""}
                             </option>
                           )
                         })}
                       </select>
-                      <p className="text-xs text-muted-foreground mt-1">Permite avancar ou voltar uma etapa por vez.</p>
+                      <p className="text-xs text-muted-foreground mt-1">Selecione o estagio desejado para a oportunidade.</p>
                     </div>
                   </fieldset>
                 )
