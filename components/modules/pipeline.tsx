@@ -1,12 +1,10 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useRef, useEffect } from "react"
 import { useStore } from "@/lib/store"
 import {
   type OppStage,
   type Opportunity,
-  type PacoteWorks,
-  type Responsavel,
   OPP_STAGE_LABELS,
   OPP_STAGE_ORDER,
   calcAgingDias,
@@ -18,9 +16,7 @@ import { SectionHeader } from "@/components/fluig/section-header"
 import { TierBadge } from "@/components/fluig/tier-badge"
 import {
   KanbanSquare,
-  Plus,
   X,
-  Clock,
   DollarSign,
   AlertTriangle,
   List,
@@ -36,12 +32,12 @@ import {
   FileText,
   Handshake,
   Trophy,
+  Download,
+  FileSpreadsheet,
+  ChevronDown,
 } from "lucide-react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-
-const PACOTES: PacoteWorks[] = ["Essencial", "Avançado", "Premium", "Personalizado"]
-const RESPONSAVEIS: Responsavel[] = ["Camila", "Niésio", "Dupla"]
 
 const STAGE_ICONS: Record<OppStage, React.ReactNode> = {
   selecionado: <CircleDot className="w-3.5 h-3.5" />,
@@ -58,26 +54,16 @@ const STAGE_ICONS: Record<OppStage, React.ReactNode> = {
 export function PipelineModule() {
   const accounts = useStore((s) => s.accounts)
   const opportunities = useStore((s) => s.opportunities)
-  const addOpportunity = useStore((s) => s.addOpportunity)
   const moveOpportunityStage = useStore((s) => s.moveOpportunityStage)
   const deleteOpportunity = useStore((s) => s.deleteOpportunity)
 
   const [viewMode, setViewMode] = useState<"kanban" | "lista">("kanban")
-  const [createOpen, setCreateOpen] = useState(false)
-  const [error, setError] = useState("")
   const [closingOpp, setClosingOpp] = useState<{ id: string; type: "won" | "lost" } | null>(null)
   const [closingMrr, setClosingMrr] = useState(0)
   const [closingMotivo, setClosingMotivo] = useState("")
   const [draggedId, setDraggedId] = useState<string | null>(null)
-
-  const [form, setForm] = useState({
-    account_id: "",
-    mrr_estimado: 0,
-    pacote_works: "Essencial" as PacoteWorks,
-    responsavel: "Camila" as Responsavel,
-    proximo_passo: "",
-    data_proximo_passo: "",
-  })
+  const [exportOpen, setExportOpen] = useState(false)
+  const exportRef = useRef<HTMLDivElement>(null)
 
   const activeStages = OPP_STAGE_ORDER
 
@@ -86,12 +72,14 @@ export function PipelineModule() {
   const getAccountTier = (id: string) => getAccount(id)?.tier ?? "C"
   const getAccountScore = (id: string) => getAccount(id)?.score_total ?? 0
 
-  const availableAccounts = useMemo(() => {
-    const activeAccountIds = new Set(
-      opportunities.filter((o) => isOppActive(o.estagio)).map((o) => o.account_id)
-    )
-    return accounts.filter((a) => !activeAccountIds.has(a.id))
-  }, [accounts, opportunities])
+  // Close export dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (exportRef.current && !exportRef.current.contains(e.target as Node)) setExportOpen(false)
+    }
+    document.addEventListener("mousedown", handleClick)
+    return () => document.removeEventListener("mousedown", handleClick)
+  }, [])
 
   const pipelineTotal = useMemo(
     () => opportunities.filter((o) => isOppActive(o.estagio)).reduce((sum, o) => sum + o.mrr_estimado, 0),
@@ -103,25 +91,217 @@ export function PipelineModule() {
     [opportunities]
   )
 
-  function handleCreate(e: React.FormEvent) {
-    e.preventDefault()
-    setError("")
-    const result = addOpportunity({
-      ...form,
-      estagio: "selecionado",
-      mrr_fechado: 0,
-      data_contato: "",
-      data_visita: "",
-      data_proposta: "",
-      data_fechamento: "",
-      motivo_perda: "",
+  /* ── Export helpers ── */
+  function buildExportRows() {
+    return opportunities.map((opp) => {
+      const acct = getAccount(opp.account_id)
+      const aging = calcAgingDias(opp.atualizado_em)
+      return {
+        conta: acct?.nome ?? "--",
+        segmento: acct?.segmento ?? "--",
+        porte: acct?.porte ?? "--",
+        tier: acct?.tier ?? "--",
+        score: acct?.score_total ?? 0,
+        estagio: OPP_STAGE_LABELS[opp.estagio],
+        mrr_estimado: opp.mrr_estimado,
+        mrr_fechado: opp.mrr_fechado,
+        pacote_works: opp.pacote_works,
+        responsavel: opp.responsavel,
+        aging,
+        proximo_passo: opp.proximo_passo || "--",
+        data_proximo_passo: opp.data_proximo_passo ? format(new Date(opp.data_proximo_passo), "dd/MM/yyyy", { locale: ptBR }) : "--",
+        criado_em: format(new Date(opp.criado_em), "dd/MM/yyyy", { locale: ptBR }),
+        atualizado_em: format(new Date(opp.atualizado_em), "dd/MM/yyyy", { locale: ptBR }),
+        motivo_perda: opp.motivo_perda || "",
+      }
     })
-    if (result === null) {
-      setError("Esta conta ja possui uma oportunidade ativa.")
-      return
+  }
+
+  function exportCSV() {
+    const rows = buildExportRows()
+    const headers = ["Conta","Segmento","Porte","Tier","Score","Estagio","MRR Estimado (R$)","MRR Fechado (R$)","Pacote Works","Responsavel","Aging (dias)","Proximo Passo","Data Prox. Passo","Criado em","Atualizado em","Motivo Perda"]
+    const csvRows = rows.map((r) => [
+      r.conta, r.segmento, r.porte, r.tier, r.score, r.estagio,
+      r.mrr_estimado, r.mrr_fechado, r.pacote_works, r.responsavel,
+      r.aging, r.proximo_passo, r.data_proximo_passo, r.criado_em, r.atualizado_em, r.motivo_perda,
+    ].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(";"))
+    const bom = "\uFEFF"
+    const csv = bom + [headers.join(";"), ...csvRows].join("\n")
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `pipeline_${format(new Date(), "yyyy-MM-dd")}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    setExportOpen(false)
+  }
+
+  async function exportPDF() {
+    const { default: jsPDF } = await import("jspdf")
+    const rows = buildExportRows()
+    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" })
+    const pageW = doc.internal.pageSize.getWidth()
+    const pageH = doc.internal.pageSize.getHeight()
+    const margin = 12
+
+    // ── Header ──
+    doc.setFillColor(0, 55, 105) // fluig-primary blue
+    doc.rect(0, 0, pageW, 22, "F")
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(16)
+    doc.setFont("helvetica", "bold")
+    doc.text("Pipeline de Oportunidades", margin, 14)
+    doc.setFontSize(9)
+    doc.setFont("helvetica", "normal")
+    doc.text(`Gerado em ${format(new Date(), "dd/MM/yyyy 'as' HH:mm", { locale: ptBR })}`, pageW - margin, 14, { align: "right" })
+
+    // ── Summary cards ──
+    let y = 30
+    const activePipeline = opportunities.filter((o) => isOppActive(o.estagio))
+    const totalMrrPipeline = activePipeline.reduce((s, o) => s + o.mrr_estimado, 0)
+    const totalMrrFechado = opportunities.filter((o) => o.estagio === "works_fechado").reduce((s, o) => s + o.mrr_fechado, 0)
+    const totalOps = opportunities.length
+    const activeOps = activePipeline.length
+
+    const cards = [
+      { label: "Oportunidades Ativas", value: String(activeOps) },
+      { label: "Total Oportunidades", value: String(totalOps) },
+      { label: "MRR Pipeline", value: `R$ ${totalMrrPipeline.toLocaleString("pt-BR")}` },
+      { label: "MRR Fechado", value: `R$ ${totalMrrFechado.toLocaleString("pt-BR")}` },
+    ]
+    const cardW = (pageW - margin * 2 - 12) / 4
+    cards.forEach((card, i) => {
+      const cx = margin + i * (cardW + 4)
+      doc.setFillColor(245, 247, 250)
+      doc.roundedRect(cx, y, cardW, 16, 2, 2, "F")
+      doc.setFontSize(8)
+      doc.setTextColor(120, 120, 120)
+      doc.setFont("helvetica", "normal")
+      doc.text(card.label, cx + 4, y + 6)
+      doc.setFontSize(12)
+      doc.setTextColor(30, 30, 30)
+      doc.setFont("helvetica", "bold")
+      doc.text(card.value, cx + 4, y + 13)
+    })
+    y += 24
+
+    // ── Stage summary ──
+    doc.setFontSize(10)
+    doc.setFont("helvetica", "bold")
+    doc.setTextColor(0, 55, 105)
+    doc.text("Resumo por Estagio", margin, y)
+    y += 5
+    const stageColW = (pageW - margin * 2) / OPP_STAGE_ORDER.length
+    OPP_STAGE_ORDER.forEach((stage, i) => {
+      const stageOpps = opportunities.filter((o) => o.estagio === stage)
+      const stageMrr = stageOpps.reduce((s, o) => s + o.mrr_estimado, 0)
+      const sx = margin + i * stageColW
+      doc.setFillColor(i % 2 === 0 ? 250 : 243, i % 2 === 0 ? 251 : 244, i % 2 === 0 ? 252 : 246)
+      doc.roundedRect(sx + 0.5, y, stageColW - 1, 14, 1, 1, "F")
+      doc.setFontSize(7)
+      doc.setFont("helvetica", "bold")
+      doc.setTextColor(50, 50, 50)
+      doc.text(OPP_STAGE_LABELS[stage], sx + 2, y + 5)
+      doc.setFont("helvetica", "normal")
+      doc.setFontSize(7)
+      doc.setTextColor(100, 100, 100)
+      doc.text(`${stageOpps.length} ops | R$ ${stageMrr.toLocaleString("pt-BR")}`, sx + 2, y + 11)
+    })
+    y += 20
+
+    // ── Table ──
+    doc.setFontSize(10)
+    doc.setFont("helvetica", "bold")
+    doc.setTextColor(0, 55, 105)
+    doc.text("Detalhamento", margin, y)
+    y += 5
+
+    const cols = [
+      { label: "Conta", w: 42 },
+      { label: "Estagio", w: 30 },
+      { label: "Tier", w: 14 },
+      { label: "Score", w: 16 },
+      { label: "MRR Est.", w: 28 },
+      { label: "MRR Fech.", w: 28 },
+      { label: "Pacote", w: 28 },
+      { label: "Responsavel", w: 24 },
+      { label: "Aging", w: 14 },
+      { label: "Prox. Passo", w: 42 },
+      { label: "Motivo Perda", w: 38 },
+    ]
+    const tableW = cols.reduce((s, c) => s + c.w, 0)
+
+    // Table header
+    doc.setFillColor(0, 55, 105)
+    doc.rect(margin, y, tableW, 7, "F")
+    doc.setFontSize(7)
+    doc.setFont("helvetica", "bold")
+    doc.setTextColor(255, 255, 255)
+    let cx = margin
+    cols.forEach((col) => {
+      doc.text(col.label, cx + 1.5, y + 5)
+      cx += col.w
+    })
+    y += 7
+
+    // Table rows
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(7)
+    rows.forEach((row, idx) => {
+      if (y > pageH - 15) {
+        doc.addPage()
+        y = 15
+        // Repeat header
+        doc.setFillColor(0, 55, 105)
+        doc.rect(margin, y, tableW, 7, "F")
+        doc.setFontSize(7)
+        doc.setFont("helvetica", "bold")
+        doc.setTextColor(255, 255, 255)
+        let hx = margin
+        cols.forEach((col) => { doc.text(col.label, hx + 1.5, y + 5); hx += col.w })
+        y += 7
+        doc.setFont("helvetica", "normal")
+        doc.setFontSize(7)
+      }
+      const bg = idx % 2 === 0
+      if (bg) {
+        doc.setFillColor(248, 249, 251)
+        doc.rect(margin, y, tableW, 6.5, "F")
+      }
+      doc.setTextColor(40, 40, 40)
+      const values = [
+        row.conta.substring(0, 22),
+        row.estagio,
+        row.tier,
+        String(row.score) + "/25",
+        "R$ " + row.mrr_estimado.toLocaleString("pt-BR"),
+        row.mrr_fechado > 0 ? "R$ " + row.mrr_fechado.toLocaleString("pt-BR") : "--",
+        row.pacote_works,
+        row.responsavel,
+        String(row.aging) + "d",
+        row.proximo_passo.substring(0, 24),
+        row.motivo_perda.substring(0, 22) || "--",
+      ]
+      let rx = margin
+      values.forEach((v, vi) => {
+        doc.text(v, rx + 1.5, y + 4.5)
+        rx += cols[vi].w
+      })
+      y += 6.5
+    })
+
+    // Footer
+    const pageCount = doc.getNumberOfPages()
+    for (let p = 1; p <= pageCount; p++) {
+      doc.setPage(p)
+      doc.setFontSize(7)
+      doc.setTextColor(160, 160, 160)
+      doc.text(`Fluig Board — Pagina ${p} de ${pageCount}`, pageW / 2, pageH - 5, { align: "center" })
     }
-    setCreateOpen(false)
-    setForm({ account_id: "", mrr_estimado: 0, pacote_works: "Essencial", responsavel: "Camila", proximo_passo: "", data_proximo_passo: "" })
+
+    doc.save(`pipeline_${format(new Date(), "yyyy-MM-dd")}.pdf`)
+    setExportOpen(false)
   }
 
   function handleAdvance(opp: Opportunity) {
@@ -312,13 +492,41 @@ export function PipelineModule() {
             <List className="w-4 h-4" /> Lista
           </button>
         </div>
-        <button
-          onClick={() => setCreateOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity ml-auto"
-          style={{ background: "var(--fluig-primary)" }}
-        >
-          <Plus className="w-4 h-4" /> Nova Oportunidade
-        </button>
+        {/* Export dropdown */}
+        <div className="relative ml-auto" ref={exportRef}>
+          <button
+            onClick={() => setExportOpen(!exportOpen)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+            style={{ background: "var(--fluig-primary)" }}
+          >
+            <Download className="w-4 h-4" /> Exportar Pipeline <ChevronDown className={`w-3.5 h-3.5 transition-transform ${exportOpen ? "rotate-180" : ""}`} />
+          </button>
+          {exportOpen && (
+            <div className="absolute right-0 top-full mt-1 w-56 rounded-lg border border-border bg-card shadow-lg z-50 overflow-hidden">
+              <button
+                onClick={exportPDF}
+                className="flex items-center gap-3 w-full px-4 py-3 text-sm text-foreground hover:bg-muted transition-colors"
+              >
+                <FileText className="w-4 h-4" style={{ color: "var(--fluig-danger)" }} />
+                <div className="text-left">
+                  <p className="font-medium">Exportar PDF</p>
+                  <p className="text-xs text-muted-foreground">Relatorio visual formatado</p>
+                </div>
+              </button>
+              <div className="h-px bg-border" />
+              <button
+                onClick={exportCSV}
+                className="flex items-center gap-3 w-full px-4 py-3 text-sm text-foreground hover:bg-muted transition-colors"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                <div className="text-left">
+                  <p className="font-medium">Exportar CSV</p>
+                  <p className="text-xs text-muted-foreground">Abre no Excel / Google Sheets</p>
+                </div>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Kanban View */}
@@ -465,58 +673,6 @@ export function PipelineModule() {
                 )}
               </tbody>
             </table>
-          </div>
-        </div>
-      )}
-
-      {/* Create Modal */}
-      {createOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-foreground/30" onClick={() => setCreateOpen(false)} />
-          <div className="relative w-full max-w-md rounded-xl bg-card border border-border overflow-hidden">
-            <div className="px-6 py-4 text-primary-foreground" style={{ background: "linear-gradient(135deg, var(--fluig-primary) 0%, var(--fluig-secondary) 100%)" }}>
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Iniciar Oportunidade Works</h3>
-                <button onClick={() => setCreateOpen(false)} aria-label="Fechar"><X className="w-5 h-5" /></button>
-              </div>
-            </div>
-            <form onSubmit={handleCreate} className="p-6 flex flex-col gap-4">
-              {error && <p className="text-sm px-3 py-2 rounded-lg" style={{ color: "var(--fluig-danger)", background: "color-mix(in srgb, var(--fluig-danger) 10%, transparent)" }}>{error}</p>}
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Conta <span style={{ color: "var(--fluig-danger)" }}>*</span></label>
-                <select required value={form.account_id} onChange={(e) => setForm({ ...form, account_id: e.target.value })} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-                  <option value="">Selecione...</option>
-                  {availableAccounts.map((a) => <option key={a.id} value={a.id}>{a.nome} (Tier {a.tier})</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">MRR Estimado (R$) <span style={{ color: "var(--fluig-danger)" }}>*</span></label>
-                <input required type="number" min={0} step={100} value={form.mrr_estimado} onChange={(e) => setForm({ ...form, mrr_estimado: Number(e.target.value) })} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Pacote Works</label>
-                  <select value={form.pacote_works} onChange={(e) => setForm({ ...form, pacote_works: e.target.value as PacoteWorks })} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-                    {PACOTES.map((p) => <option key={p} value={p}>{p}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Responsavel</label>
-                  <select value={form.responsavel} onChange={(e) => setForm({ ...form, responsavel: e.target.value as Responsavel })} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-                    {RESPONSAVEIS.map((r) => <option key={r} value={r}>{r}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Proximo Passo</label>
-                <input type="text" value={form.proximo_passo} onChange={(e) => setForm({ ...form, proximo_passo: e.target.value })} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Data Proximo Passo</label>
-                <input type="date" value={form.data_proximo_passo} onChange={(e) => setForm({ ...form, data_proximo_passo: e.target.value })} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
-              </div>
-              <button type="submit" className="w-full px-4 py-2.5 rounded-lg text-primary-foreground font-medium text-sm hover:opacity-90 transition-opacity" style={{ background: "var(--fluig-primary)" }}>Criar Oportunidade</button>
-            </form>
           </div>
         </div>
       )}
