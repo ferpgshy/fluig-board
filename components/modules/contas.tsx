@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback, useRef, useEffect } from "react"
 import { useStore } from "@/lib/store"
 import {
   type Account,
@@ -24,6 +24,54 @@ import { TierBadge } from "@/components/fluig/tier-badge"
 import { Building2, Plus, Search, X, Pencil, Trash2, Eye, Download, ArrowUpDown } from "lucide-react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
+
+/* ── Debounced number input (avoids keystroke loss on fast typing) ── */
+function DebouncedNumberInput({
+  value: externalValue,
+  onCommit,
+  delay = 500,
+  ...props
+}: {
+  value: number
+  onCommit: (v: number) => void
+  delay?: number
+} & Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "type">) {
+  const [local, setLocal] = useState<string>(externalValue ? String(externalValue) : '')
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const committedRef = useRef(externalValue)
+
+  // Sync from outside only when the external value changes from a source other than our own commit
+  useEffect(() => {
+    if (externalValue !== committedRef.current) {
+      setLocal(externalValue ? String(externalValue) : '')
+      committedRef.current = externalValue
+    }
+  }, [externalValue])
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value
+    setLocal(raw)
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => {
+      const num = Number(raw) || 0
+      committedRef.current = num
+      onCommit(num)
+    }, delay)
+  }
+
+  // Flush on blur so the value is saved even if user clicks away quickly
+  const handleBlur = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current)
+      timerRef.current = null
+    }
+    const num = Number(local) || 0
+    committedRef.current = num
+    onCommit(num)
+  }
+
+  return <input type="number" value={local} onChange={handleChange} onBlur={handleBlur} {...props} />
+}
 
 const SEGMENTOS: Segmento[] = ["Agroindústria", "Construção e Projetos", "Distribuição", "Educação", "Logística", "Manufatura", "Saúde", "Serviços", "Setor Público", "Varejo"]
 const PORTES: Porte[] = ["PME", "Mid-Market", "Enterprise"]
@@ -564,24 +612,22 @@ export function ContasModule() {
                     <div className="grid grid-cols-2 gap-4 mt-3">
                       <div>
                         <label className="block text-sm font-medium text-foreground mb-1">MRR Estimado (R$)</label>
-                        <input
-                          type="number"
+                        <DebouncedNumberInput
+                          value={opp.mrr_estimado}
+                          onCommit={(v) => updateOpportunity(opp.id, { mrr_estimado: v })}
                           min={0}
                           step={100}
-                          value={opp.mrr_estimado || ''}
-                          onChange={(e) => updateOpportunity(opp.id, { mrr_estimado: Number(e.target.value) || 0 })}
                           className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                           placeholder="0"
                         />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-foreground mb-1">MRR Fechado (R$)</label>
-                        <input
-                          type="number"
+                        <DebouncedNumberInput
+                          value={opp.mrr_fechado}
+                          onCommit={(v) => updateOpportunity(opp.id, { mrr_fechado: v })}
                           min={0}
                           step={100}
-                          value={opp.mrr_fechado || ''}
-                          onChange={(e) => updateOpportunity(opp.id, { mrr_fechado: Number(e.target.value) || 0 })}
                           className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                           placeholder="0"
                         />
