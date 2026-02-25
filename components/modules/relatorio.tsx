@@ -386,8 +386,8 @@ export function RelatorioModule() {
                             type="number"
                             min={0}
                             step={100}
-                            value={editForm.investimento_mrr ?? 0}
-                            onChange={(e) => setEditForm({ ...editForm, investimento_mrr: Number(e.target.value) })}
+                            value={editForm.investimento_mrr || ''}
+                            onChange={(e) => setEditForm({ ...editForm, investimento_mrr: Number(e.target.value) || 0 })}
                             className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                           />
                         </div>

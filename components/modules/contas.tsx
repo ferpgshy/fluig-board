@@ -568,7 +568,7 @@ export function ContasModule() {
                           type="number"
                           min={0}
                           step={100}
-                          value={opp.mrr_estimado}
+                          value={opp.mrr_estimado || ''}
                           onChange={(e) => updateOpportunity(opp.id, { mrr_estimado: Number(e.target.value) || 0 })}
                           className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                           placeholder="0"
@@ -580,7 +580,7 @@ export function ContasModule() {
                           type="number"
                           min={0}
                           step={100}
-                          value={opp.mrr_fechado}
+                          value={opp.mrr_fechado || ''}
                           onChange={(e) => updateOpportunity(opp.id, { mrr_fechado: Number(e.target.value) || 0 })}
                           className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                           placeholder="0"
