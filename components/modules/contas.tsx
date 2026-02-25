@@ -95,7 +95,7 @@ const emptyForm = (): Omit<Account, "id" | "score_total" | "tier" | "onda" | "cr
   data_registro: new Date().toISOString().slice(0, 10),
   data_proxima_visita: "",
   data_ultimo_contato: "",
-  estagio_inicial: "selecionado" as OppStage,
+  estagio_inicial: "contato" as OppStage,
 })
 
 export function ContasModule() {
@@ -212,7 +212,7 @@ export function ContasModule() {
           // Criar oportunidade automaticamente
           addOpportunity({
             account_id: newAccount.id,
-            estagio: estagio_inicial || "selecionado",
+            estagio: estagio_inicial || "contato",
             mrr_estimado: 0,
             mrr_fechado: 0,
             pacote_works: "Essencial",
@@ -569,7 +569,7 @@ export function ContasModule() {
                   <legend className="text-sm font-semibold text-fluig-title mb-2">Pipeline Inicial</legend>
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-1">Estagio Inicial da Oportunidade</label>
-                    <select value={form.estagio_inicial || "selecionado"} onChange={(e) => setForm({ ...form, estagio_inicial: e.target.value as OppStage })} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+                    <select value={form.estagio_inicial || "contato"} onChange={(e) => setForm({ ...form, estagio_inicial: e.target.value as OppStage })} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring">
                       {OPP_STAGE_ORDER.map((stage) => (
                         <option key={stage} value={stage}>{OPP_STAGE_LABELS[stage]}</option>
                       ))}
