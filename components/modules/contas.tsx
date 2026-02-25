@@ -556,7 +556,7 @@ export function ContasModule() {
                 {/* ── COL LEFT: Empresa ── */}
                 <div className="space-y-3 rounded-lg border border-border p-4">
                   <SectionTitle>Dados da Empresa</SectionTitle>
-                  <div className="grid grid-cols-[1fr_100px_180px] gap-3">
+                  <div className="grid grid-cols-[1fr_110px] gap-3">
                     <div>
                       <label className="block text-xs font-medium text-foreground mb-1">Nome <span className="text-fluig-danger">*</span></label>
                       <input required type="text" value={form.nome} onChange={(e) => { setForm({ ...form, nome: e.target.value }); setFormErrors((p) => { const { nome, ...rest } = p; return rest }) }} className={`w-full px-3 py-2 rounded-md border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errCls("nome")}`} />
@@ -568,12 +568,12 @@ export function ContasModule() {
                         {PORTES.map((p) => <option key={p} value={p}>{p}</option>)}
                       </select>
                     </div>
-                    <div>
-                      <label className="block text-xs font-medium text-foreground mb-1">Segmento <span className="text-fluig-danger">*</span></label>
-                      <select required value={form.segmento} onChange={(e) => { setForm({ ...form, segmento: e.target.value as Segmento }); setFormErrors((p) => { const { segmento, ...rest } = p; return rest }) }} className={`w-full px-2.5 py-2 rounded-md border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errCls("segmento")}`}>
-                        {SEGMENTOS.map((s) => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-foreground mb-1">Segmento <span className="text-fluig-danger">*</span></label>
+                    <select required value={form.segmento} onChange={(e) => { setForm({ ...form, segmento: e.target.value as Segmento }); setFormErrors((p) => { const { segmento, ...rest } = p; return rest }) }} className={`w-full px-3 py-2 rounded-md border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errCls("segmento")}`}>
+                      {SEGMENTOS.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
                   </div>
                 </div>
 
