@@ -92,6 +92,9 @@ const emptyForm = (): Omit<Account, "id" | "score_total" | "tier" | "onda" | "cr
   score_risco_churn: 3,
   score_acesso: 3,
   observacoes: "",
+  data_registro: new Date().toISOString().slice(0, 10),
+  data_proxima_visita: "",
+  data_ultimo_contato: "",
   estagio_inicial: "selecionado" as OppStage,
 })
 
@@ -163,6 +166,9 @@ export function ContasModule() {
       score_risco_churn: account.score_risco_churn,
       score_acesso: account.score_acesso,
       observacoes: account.observacoes,
+      data_registro: account.data_registro || "",
+      data_proxima_visita: account.data_proxima_visita || "",
+      data_ultimo_contato: account.data_ultimo_contato || "",
     })
     setDrawerOpen(true)
   }
@@ -261,6 +267,13 @@ export function ContasModule() {
     return OPP_STAGE_LABELS[opp.estagio]
   }
 
+  function getNextStageName(opp: typeof opportunities[0] | null | undefined): string {
+    if (!opp || !isOppActive(opp.estagio)) return ""
+    const idx = OPP_STAGE_ORDER.indexOf(opp.estagio)
+    if (idx < 0 || idx >= OPP_STAGE_ORDER.length - 1) return ""
+    return OPP_STAGE_LABELS[OPP_STAGE_ORDER[idx + 1]]
+  }
+
   return (
     <div>
       <SectionHeader
@@ -339,6 +352,12 @@ export function ContasModule() {
                 const stageText = getStageDisplay(opp)
                 const mrrValue = opp ? (opp.estagio === "works_fechado" ? opp.mrr_fechado : opp.mrr_estimado) : 0
                 const isFinalizado = opp && (opp.estagio === "works_fechado" || opp.estagio === "perdido")
+                const nextStageName = getNextStageName(activeOpp)
+                const proximoPasso = activeOpp?.proximo_passo
+                  ? activeOpp.proximo_passo
+                  : nextStageName
+                    ? `→ ${nextStageName}`
+                    : "--"
                 return (
                   <tr key={account.id} className="border-b border-border last:border-b-0 hover:bg-muted/50 transition-colors">
                     <td className="px-4 py-3 font-medium text-foreground">{account.nome}</td>
@@ -352,7 +371,7 @@ export function ContasModule() {
                     </td>
                     <td className="px-4 py-3 text-center text-muted-foreground hidden lg:table-cell">{account.onda}</td>
                     <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell text-xs max-w-[200px] truncate">
-                      {activeOpp?.proximo_passo || "--"}
+                      {proximoPasso}
                     </td>
                     <td className={`px-4 py-3 hidden xl:table-cell text-xs ${ppVencido ? "text-fluig-danger font-semibold" : "text-muted-foreground"}`}>
                       {activeOpp?.data_proximo_passo ? format(new Date(activeOpp.data_proximo_passo), "dd/MM/yyyy", { locale: ptBR }) : "--"}
@@ -411,6 +430,13 @@ export function ContasModule() {
               detailOpp?.responsavel ? { label: "Responsavel", value: detailOpp.responsavel } : null,
               detailOpp?.proximo_passo ? { label: "Proximo Passo", value: detailOpp.proximo_passo } : null,
               detailOpp?.data_proximo_passo ? { label: "Data Prox. Passo", value: format(new Date(detailOpp.data_proximo_passo), "dd/MM/yyyy", { locale: ptBR }) } : null,
+              detailOpp?.data_contato ? { label: "Data Contato", value: format(new Date(detailOpp.data_contato), "dd/MM/yyyy", { locale: ptBR }) } : null,
+              detailOpp?.data_visita ? { label: "Data Visita Opp", value: format(new Date(detailOpp.data_visita), "dd/MM/yyyy", { locale: ptBR }) } : null,
+              detailOpp?.data_proposta ? { label: "Data Proposta", value: format(new Date(detailOpp.data_proposta), "dd/MM/yyyy", { locale: ptBR }) } : null,
+              detailOpp?.data_fechamento ? { label: "Data Fechamento", value: format(new Date(detailOpp.data_fechamento), "dd/MM/yyyy", { locale: ptBR }) } : null,
+              detailAccount.data_registro ? { label: "Registro", value: format(new Date(detailAccount.data_registro), "dd/MM/yyyy", { locale: ptBR }) } : null,
+              detailAccount.data_ultimo_contato ? { label: "Ultimo Contato", value: format(new Date(detailAccount.data_ultimo_contato), "dd/MM/yyyy", { locale: ptBR }) } : null,
+              detailAccount.data_proxima_visita ? { label: "Proxima Visita", value: format(new Date(detailAccount.data_proxima_visita), "dd/MM/yyyy", { locale: ptBR }) } : null,
               detailOpp?.motivo_perda ? { label: "Motivo Perda", value: detailOpp.motivo_perda } : null,
             ].filter(Boolean) as { label: string; value: string }[]
 
@@ -574,6 +600,25 @@ export function ContasModule() {
                 </div>
               </fieldset>
 
+              {/* Datas da Conta */}
+              <fieldset className="space-y-3">
+                <legend className="text-sm font-semibold text-fluig-title mb-2">Datas</legend>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">Data de Registro</label>
+                    <input type="date" value={form.data_registro || ""} onChange={(e) => setForm({ ...form, data_registro: e.target.value })} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">Ultimo Contato</label>
+                    <input type="date" value={form.data_ultimo_contato || ""} onChange={(e) => setForm({ ...form, data_ultimo_contato: e.target.value })} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">Proxima Visita</label>
+                    <input type="date" value={form.data_proxima_visita || ""} onChange={(e) => setForm({ ...form, data_proxima_visita: e.target.value })} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                  </div>
+                </div>
+              </fieldset>
+
               {/* Estagio Opp - only in edit mode */}
               {editingAccount && (() => {
                 const opp = opportunities.find((o) => o.account_id === editingAccount.id && isOppActive(o.estagio))
@@ -634,6 +679,51 @@ export function ContasModule() {
                       </div>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">Valores mensais recorrentes da oportunidade.</p>
+
+                    {/* Proximo Passo */}
+                    <div className="mt-3">
+                      <label className="block text-sm font-medium text-foreground mb-1">Proximo Passo</label>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="col-span-2">
+                          <input
+                            type="text"
+                            value={opp.proximo_passo}
+                            onChange={(e) => updateOpportunity(opp.id, { proximo_passo: e.target.value })}
+                            placeholder={`Ex: ${getNextStageName(opp) || "Agendar reunião"}`}
+                            className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                          />
+                        </div>
+                        <div>
+                          <input
+                            type="date"
+                            value={opp.data_proximo_passo}
+                            onChange={(e) => updateOpportunity(opp.id, { data_proximo_passo: e.target.value })}
+                            className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Datas da Oportunidade */}
+                    <div className="grid grid-cols-2 gap-3 mt-3">
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">Data Contato</label>
+                        <input type="date" value={opp.data_contato} onChange={(e) => updateOpportunity(opp.id, { data_contato: e.target.value })} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">Data Visita</label>
+                        <input type="date" value={opp.data_visita} onChange={(e) => updateOpportunity(opp.id, { data_visita: e.target.value })} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">Data Proposta</label>
+                        <input type="date" value={opp.data_proposta} onChange={(e) => updateOpportunity(opp.id, { data_proposta: e.target.value })} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">Data Fechamento</label>
+                        <input type="date" value={opp.data_fechamento} onChange={(e) => updateOpportunity(opp.id, { data_fechamento: e.target.value })} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">Datas-chave do ciclo de venda da oportunidade.</p>
                   </fieldset>
                 )
               })()}

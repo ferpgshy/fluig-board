@@ -69,6 +69,9 @@ export interface Account {
   tier: Tier
   onda: Onda
   observacoes: string
+  data_registro: string
+  data_proxima_visita: string
+  data_ultimo_contato: string
   criado_em: string
   atualizado_em: string
 }
