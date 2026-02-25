@@ -120,6 +120,23 @@ export function ContasModule() {
 
   const [form, setForm] = useState(emptyForm())
   const [creatingOpp, setCreatingOpp] = useState(false)
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+
+  function validateForm(): Record<string, string> {
+    const errors: Record<string, string> = {}
+    if (!form.nome.trim()) errors.nome = "Nome da empresa é obrigatório"
+    if (!form.segmento) errors.segmento = "Selecione um segmento"
+    if (!form.porte) errors.porte = "Selecione um porte"
+    if (!form.contato_nome.trim()) errors.contato_nome = "Nome do contato é obrigatório"
+    if (!form.contato_email.trim() && !form.contato_whatsapp.trim()) {
+      errors.contato_email = "Informe pelo menos email ou WhatsApp"
+      errors.contato_whatsapp = "Informe pelo menos email ou WhatsApp"
+    }
+    if (!form.data_registro) errors.data_registro = "Data de registro é obrigatória"
+    return errors
+  }
+
+  const errCls = (field: string) => formErrors[field] ? "border-fluig-danger ring-1 ring-fluig-danger" : ""
 
   // Sorted by score_total DESC as default
   const filtered = useMemo(() => {
@@ -141,6 +158,7 @@ export function ContasModule() {
     setForm(emptyForm())
     setEditingAccount(null)
     setModuloInput("")
+    setFormErrors({})
   }
 
   function openCreate() {
@@ -175,6 +193,12 @@ export function ContasModule() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    const errors = validateForm()
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors)
+      return
+    }
+    setFormErrors({})
     if (editingAccount) {
       updateAccount(editingAccount.id, form)
       setDrawerOpen(false)
@@ -510,23 +534,29 @@ export function ContasModule() {
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
+              {Object.keys(formErrors).length > 0 && (
+                <div className="p-3 rounded-lg bg-fluig-danger/10 border border-fluig-danger/30">
+                  <p className="text-sm font-medium text-fluig-danger">Preencha os campos obrigatorios antes de continuar.</p>
+                </div>
+              )}
               {/* Basic info */}
               <fieldset className="space-y-3">
                 <legend className="text-sm font-semibold text-fluig-title mb-2">Dados da Empresa</legend>
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1">Nome da Empresa <span className="text-fluig-danger">*</span></label>
-                  <input required type="text" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                  <input required type="text" value={form.nome} onChange={(e) => { setForm({ ...form, nome: e.target.value }); setFormErrors((p) => { const { nome, ...rest } = p; return rest }) }} className={`w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errCls("nome")}`} />
+                  {formErrors.nome && <p className="text-xs text-fluig-danger mt-1">{formErrors.nome}</p>}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-1">Segmento <span className="text-fluig-danger">*</span></label>
-                    <select required value={form.segmento} onChange={(e) => setForm({ ...form, segmento: e.target.value as Segmento })} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+                    <select required value={form.segmento} onChange={(e) => { setForm({ ...form, segmento: e.target.value as Segmento }); setFormErrors((p) => { const { segmento, ...rest } = p; return rest }) }} className={`w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errCls("segmento")}`}>
                       {SEGMENTOS.map((s) => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-1">Porte <span className="text-fluig-danger">*</span></label>
-                    <select required value={form.porte} onChange={(e) => setForm({ ...form, porte: e.target.value as Porte })} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+                    <select required value={form.porte} onChange={(e) => { setForm({ ...form, porte: e.target.value as Porte }); setFormErrors((p) => { const { porte, ...rest } = p; return rest }) }} className={`w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errCls("porte")}`}>
                       {PORTES.map((p) => <option key={p} value={p}>{p}</option>)}
                     </select>
                   </div>
@@ -552,10 +582,12 @@ export function ContasModule() {
               {/* Contact */}
               <fieldset className="space-y-3">
                 <legend className="text-sm font-semibold text-fluig-title mb-2">Contato / Sponsor</legend>
+                <p className="text-xs text-muted-foreground mb-2"><span className="text-fluig-danger">*</span> obrigatório | <span className="text-fluig-danger">**</span> preencha pelo menos um</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">Nome</label>
-                    <input type="text" value={form.contato_nome} onChange={(e) => setForm({ ...form, contato_nome: e.target.value })} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                    <label className="block text-sm font-medium text-foreground mb-1">Nome <span className="text-fluig-danger">*</span></label>
+                    <input type="text" value={form.contato_nome} onChange={(e) => { setForm({ ...form, contato_nome: e.target.value }); setFormErrors((p) => { const { contato_nome, ...rest } = p; return rest }) }} className={`w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errCls("contato_nome")}`} />
+                    {formErrors.contato_nome && <p className="text-xs text-fluig-danger mt-1">{formErrors.contato_nome}</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-1">Cargo</label>
@@ -564,12 +596,14 @@ export function ContasModule() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">Email</label>
-                    <input type="email" value={form.contato_email} onChange={(e) => setForm({ ...form, contato_email: e.target.value })} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                    <label className="block text-sm font-medium text-foreground mb-1">Email <span className="text-fluig-danger">**</span></label>
+                    <input type="email" value={form.contato_email} onChange={(e) => { setForm({ ...form, contato_email: e.target.value }); setFormErrors((p) => { const { contato_email, contato_whatsapp, ...rest } = p; return rest }) }} className={`w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errCls("contato_email")}`} />
+                    {formErrors.contato_email && <p className="text-xs text-fluig-danger mt-1">{formErrors.contato_email}</p>}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">WhatsApp</label>
-                    <input type="text" value={form.contato_whatsapp} onChange={(e) => setForm({ ...form, contato_whatsapp: e.target.value })} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                    <label className="block text-sm font-medium text-foreground mb-1">WhatsApp <span className="text-fluig-danger">**</span></label>
+                    <input type="text" value={form.contato_whatsapp} onChange={(e) => { setForm({ ...form, contato_whatsapp: e.target.value }); setFormErrors((p) => { const { contato_email, contato_whatsapp, ...rest } = p; return rest }) }} className={`w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errCls("contato_whatsapp")}`} />
+                    {formErrors.contato_whatsapp && <p className="text-xs text-fluig-danger mt-1">{formErrors.contato_whatsapp}</p>}
                   </div>
                 </div>
               </fieldset>
@@ -605,8 +639,9 @@ export function ContasModule() {
                 <legend className="text-sm font-semibold text-fluig-title mb-2">Datas</legend>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">Data de Registro</label>
-                    <input type="date" value={form.data_registro || ""} onChange={(e) => setForm({ ...form, data_registro: e.target.value })} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                    <label className="block text-sm font-medium text-foreground mb-1">Data de Registro <span className="text-fluig-danger">*</span></label>
+                    <input type="date" value={form.data_registro || ""} onChange={(e) => { setForm({ ...form, data_registro: e.target.value }); setFormErrors((p) => { const { data_registro, ...rest } = p; return rest }) }} className={`w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errCls("data_registro")}`} />
+                    {formErrors.data_registro && <p className="text-xs text-fluig-danger mt-1">{formErrors.data_registro}</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-1">Ultimo Contato</label>
