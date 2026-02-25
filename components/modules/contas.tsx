@@ -21,7 +21,7 @@ import {
 } from "@/lib/models"
 import { SectionHeader } from "@/components/fluig/section-header"
 import { TierBadge } from "@/components/fluig/tier-badge"
-import { Building2, Plus, Search, X, Pencil, Trash2, Eye, Download, ArrowUpDown } from "lucide-react"
+import { Building2, Plus, Search, X, Pencil, Trash2, Eye, Download, ArrowUpDown, ChevronDown } from "lucide-react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 
@@ -73,6 +73,36 @@ function DebouncedNumberInput({
   return <input type="number" value={local} onChange={handleChange} onBlur={handleBlur} {...props} />
 }
 
+/* ── Collapsible form section ── */
+function FormSection({ title, isOpen, onToggle, children, badge }: {
+  title: string
+  isOpen: boolean
+  onToggle: () => void
+  children: React.ReactNode
+  badge?: React.ReactNode
+}) {
+  return (
+    <div className="rounded-lg border border-border overflow-hidden">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-4 py-2.5 bg-muted/40 hover:bg-muted/70 transition-colors text-left"
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-fluig-title">{title}</span>
+          {badge}
+        </div>
+        <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+      </button>
+      <div className={`grid transition-all duration-200 ${isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+        <div className="overflow-hidden">
+          <div className="px-4 py-3 space-y-3">{children}</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const SEGMENTOS: Segmento[] = ["Agroindústria", "Construção e Projetos", "Distribuição", "Educação", "Logística", "Manufatura", "Saúde", "Serviços", "Setor Público", "Varejo"]
 const PORTES: Porte[] = ["PME", "Mid-Market", "Enterprise"]
 
@@ -122,6 +152,10 @@ export function ContasModule() {
   const [creatingOpp, setCreatingOpp] = useState(false)
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
+  const defaultSections: Record<string, boolean> = { empresa: true, pipeline: true, contato: true, fluig: false, datas: true, oportunidade: true, scoring: false, obs: false }
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(defaultSections)
+  const toggleSection = (key: string) => setOpenSections((p) => ({ ...p, [key]: !p[key] }))
+
   function validateForm(): Record<string, string> {
     const errors: Record<string, string> = {}
     if (!form.nome.trim()) errors.nome = "Nome da empresa é obrigatório"
@@ -160,6 +194,7 @@ export function ContasModule() {
     setEditingAccount(null)
     setModuloInput("")
     setFormErrors({})
+    setOpenSections(defaultSections)
   }
 
   function openCreate() {
@@ -197,6 +232,8 @@ export function ContasModule() {
     const errors = validateForm()
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors)
+      // Abrir todas as secoes para mostrar erros
+      setOpenSections(Object.fromEntries(Object.keys(defaultSections).map((k) => [k, true])))
       return
     }
     setFormErrors({})
@@ -534,271 +571,221 @@ export function ContasModule() {
               </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
+            <form onSubmit={handleSubmit} className="p-5 flex flex-col gap-3">
               {Object.keys(formErrors).length > 0 && (
-                <div className="p-3 rounded-lg bg-fluig-danger/10 border border-fluig-danger/30">
-                  <p className="text-sm font-medium text-fluig-danger">Preencha os campos obrigatorios antes de continuar.</p>
+                <div className="px-3 py-2 rounded-lg bg-fluig-danger/10 border border-fluig-danger/30">
+                  <p className="text-xs font-medium text-fluig-danger">Preencha os campos obrigatorios antes de continuar.</p>
                 </div>
               )}
-              {/* Basic info */}
-              <fieldset className="space-y-3">
-                <legend className="text-sm font-semibold text-fluig-title mb-2">Dados da Empresa</legend>
+
+              {/* ── Dados da Empresa ── */}
+              <FormSection title="Dados da Empresa" isOpen={openSections.empresa} onToggle={() => toggleSection("empresa")}>
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Nome da Empresa <span className="text-fluig-danger">*</span></label>
-                  <input required type="text" value={form.nome} onChange={(e) => { setForm({ ...form, nome: e.target.value }); setFormErrors((p) => { const { nome, ...rest } = p; return rest }) }} className={`w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errCls("nome")}`} />
-                  {formErrors.nome && <p className="text-xs text-fluig-danger mt-1">{formErrors.nome}</p>}
+                  <label className="block text-xs font-medium text-foreground mb-1">Nome da Empresa <span className="text-fluig-danger">*</span></label>
+                  <input required type="text" value={form.nome} onChange={(e) => { setForm({ ...form, nome: e.target.value }); setFormErrors((p) => { const { nome, ...rest } = p; return rest }) }} className={`w-full px-3 py-2 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errCls("nome")}`} />
+                  {formErrors.nome && <p className="text-[11px] text-fluig-danger mt-0.5">{formErrors.nome}</p>}
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-[1fr_130px] gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">Segmento <span className="text-fluig-danger">*</span></label>
-                    <select required value={form.segmento} onChange={(e) => { setForm({ ...form, segmento: e.target.value as Segmento }); setFormErrors((p) => { const { segmento, ...rest } = p; return rest }) }} className={`w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errCls("segmento")}`}>
+                    <label className="block text-xs font-medium text-foreground mb-1">Segmento <span className="text-fluig-danger">*</span></label>
+                    <select required value={form.segmento} onChange={(e) => { setForm({ ...form, segmento: e.target.value as Segmento }); setFormErrors((p) => { const { segmento, ...rest } = p; return rest }) }} className={`w-full px-3 py-2 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errCls("segmento")}`}>
                       {SEGMENTOS.map((s) => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">Porte <span className="text-fluig-danger">*</span></label>
-                    <select required value={form.porte} onChange={(e) => { setForm({ ...form, porte: e.target.value as Porte }); setFormErrors((p) => { const { porte, ...rest } = p; return rest }) }} className={`w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errCls("porte")}`}>
+                    <label className="block text-xs font-medium text-foreground mb-1">Porte <span className="text-fluig-danger">*</span></label>
+                    <select required value={form.porte} onChange={(e) => { setForm({ ...form, porte: e.target.value as Porte }); setFormErrors((p) => { const { porte, ...rest } = p; return rest }) }} className={`w-full px-3 py-2 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errCls("porte")}`}>
                       {PORTES.map((p) => <option key={p} value={p}>{p}</option>)}
                     </select>
                   </div>
                 </div>
-              </fieldset>
+              </FormSection>
 
-              {/* Estagio inicial (apenas na criacao) */}
+              {/* ── Pipeline Inicial (apenas na criacao) ── */}
               {!editingAccount && (
-                <fieldset className="space-y-3">
-                  <legend className="text-sm font-semibold text-fluig-title mb-2">Pipeline Inicial</legend>
+                <FormSection title="Pipeline Inicial" isOpen={openSections.pipeline} onToggle={() => toggleSection("pipeline")}>
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">Estagio Inicial da Oportunidade <span className="text-fluig-danger">*</span></label>
-                    <select required value={form.estagio_inicial || "selecionado"} onChange={(e) => { setForm({ ...form, estagio_inicial: e.target.value as OppStage }); setFormErrors((p) => { const { estagio_inicial, ...rest } = p; return rest }) }} className={`w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errCls("estagio_inicial")}`}>
+                    <label className="block text-xs font-medium text-foreground mb-1">Estagio Inicial <span className="text-fluig-danger">*</span></label>
+                    <select required value={form.estagio_inicial || "selecionado"} onChange={(e) => { setForm({ ...form, estagio_inicial: e.target.value as OppStage }); setFormErrors((p) => { const { estagio_inicial, ...rest } = p; return rest }) }} className={`w-full px-3 py-2 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errCls("estagio_inicial")}`}>
                       {OPP_STAGE_ORDER.map((stage) => (
                         <option key={stage} value={stage}>{OPP_STAGE_LABELS[stage]}</option>
                       ))}
                     </select>
-                    {formErrors.estagio_inicial && <p className="text-xs text-fluig-danger mt-1">{formErrors.estagio_inicial}</p>}
-                    <p className="text-xs text-muted-foreground mt-1">Ao criar esta conta, uma oportunidade sera criada automaticamente neste estagio.</p>
+                    {formErrors.estagio_inicial && <p className="text-[11px] text-fluig-danger mt-0.5">{formErrors.estagio_inicial}</p>}
+                    <p className="text-[11px] text-muted-foreground mt-1">Uma oportunidade sera criada automaticamente neste estagio.</p>
                   </div>
-                </fieldset>
+                </FormSection>
               )}
 
-              {/* Contact */}
-              <fieldset className="space-y-3">
-                <legend className="text-sm font-semibold text-fluig-title mb-2">Contato / Sponsor</legend>
-                <p className="text-xs text-muted-foreground mb-2"><span className="text-fluig-danger">*</span> obrigatório | <span className="text-fluig-danger">**</span> preencha pelo menos um</p>
-                <div className="grid grid-cols-2 gap-3">
+              {/* ── Contato / Sponsor ── */}
+              <FormSection
+                title="Contato / Sponsor"
+                isOpen={openSections.contato}
+                onToggle={() => toggleSection("contato")}
+                badge={<span className="text-[10px] text-muted-foreground font-normal">* obrigatorio | ** pelo menos um</span>}
+              >
+                <div className="grid grid-cols-[1fr_120px] gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">Nome <span className="text-fluig-danger">*</span></label>
-                    <input type="text" value={form.contato_nome} onChange={(e) => { setForm({ ...form, contato_nome: e.target.value }); setFormErrors((p) => { const { contato_nome, ...rest } = p; return rest }) }} className={`w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errCls("contato_nome")}`} />
-                    {formErrors.contato_nome && <p className="text-xs text-fluig-danger mt-1">{formErrors.contato_nome}</p>}
+                    <label className="block text-xs font-medium text-foreground mb-1">Nome <span className="text-fluig-danger">*</span></label>
+                    <input type="text" value={form.contato_nome} onChange={(e) => { setForm({ ...form, contato_nome: e.target.value }); setFormErrors((p) => { const { contato_nome, ...rest } = p; return rest }) }} className={`w-full px-3 py-2 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errCls("contato_nome")}`} />
+                    {formErrors.contato_nome && <p className="text-[11px] text-fluig-danger mt-0.5">{formErrors.contato_nome}</p>}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">Cargo</label>
-                    <input type="text" value={form.contato_cargo} onChange={(e) => setForm({ ...form, contato_cargo: e.target.value })} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">Email <span className="text-fluig-danger">**</span></label>
-                    <input type="email" value={form.contato_email} onChange={(e) => { setForm({ ...form, contato_email: e.target.value }); setFormErrors((p) => { const { contato_email, contato_whatsapp, ...rest } = p; return rest }) }} className={`w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errCls("contato_email")}`} />
-                    {formErrors.contato_email && <p className="text-xs text-fluig-danger mt-1">{formErrors.contato_email}</p>}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">WhatsApp <span className="text-fluig-danger">**</span></label>
-                    <input type="text" value={form.contato_whatsapp} onChange={(e) => { setForm({ ...form, contato_whatsapp: e.target.value }); setFormErrors((p) => { const { contato_email, contato_whatsapp, ...rest } = p; return rest }) }} className={`w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errCls("contato_whatsapp")}`} />
-                    {formErrors.contato_whatsapp && <p className="text-xs text-fluig-danger mt-1">{formErrors.contato_whatsapp}</p>}
+                    <label className="block text-xs font-medium text-foreground mb-1">Cargo</label>
+                    <input type="text" value={form.contato_cargo} onChange={(e) => setForm({ ...form, contato_cargo: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
                   </div>
                 </div>
-              </fieldset>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-foreground mb-1">Email <span className="text-fluig-danger">**</span></label>
+                    <input type="email" value={form.contato_email} onChange={(e) => { setForm({ ...form, contato_email: e.target.value }); setFormErrors((p) => { const { contato_email, contato_whatsapp, ...rest } = p; return rest }) }} className={`w-full px-3 py-2 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errCls("contato_email")}`} />
+                    {formErrors.contato_email && <p className="text-[11px] text-fluig-danger mt-0.5">{formErrors.contato_email}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-foreground mb-1">WhatsApp <span className="text-fluig-danger">**</span></label>
+                    <input type="text" value={form.contato_whatsapp} onChange={(e) => { setForm({ ...form, contato_whatsapp: e.target.value }); setFormErrors((p) => { const { contato_email, contato_whatsapp, ...rest } = p; return rest }) }} className={`w-full px-3 py-2 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errCls("contato_whatsapp")}`} />
+                    {formErrors.contato_whatsapp && <p className="text-[11px] text-fluig-danger mt-0.5">{formErrors.contato_whatsapp}</p>}
+                  </div>
+                </div>
+              </FormSection>
 
-              {/* Fluig info */}
-              <fieldset className="space-y-3">
-                <legend className="text-sm font-semibold text-fluig-title mb-2">Ambiente Fluig</legend>
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Versao Instalada</label>
-                  <input type="text" value={form.fluig_versao} onChange={(e) => setForm({ ...form, fluig_versao: e.target.value })} placeholder="Ex: 1.8.2" className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Modulos Contratados</label>
-                  <div className="flex gap-2 mb-2">
-                    <input type="text" value={moduloInput} onChange={(e) => setModuloInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addModulo() } }} placeholder="Ex: ECM, BPM..." className="flex-1 px-3 py-2 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
-                    <button type="button" onClick={addModulo} className="px-3 py-2 rounded-lg bg-muted text-foreground text-sm hover:bg-accent transition-colors">Adicionar</button>
+              {/* ── Ambiente Fluig ── */}
+              <FormSection title="Ambiente Fluig" isOpen={openSections.fluig} onToggle={() => toggleSection("fluig")}>
+                <div className="grid grid-cols-[120px_1fr] gap-3 items-end">
+                  <div>
+                    <label className="block text-xs font-medium text-foreground mb-1">Versao</label>
+                    <input type="text" value={form.fluig_versao} onChange={(e) => setForm({ ...form, fluig_versao: e.target.value })} placeholder="1.8.2" className="w-full px-3 py-2 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
                   </div>
-                  {form.fluig_modulos.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {form.fluig_modulos.map((m) => (
-                        <span key={m} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-accent text-accent-foreground text-xs">
-                          {m}
-                          <button type="button" onClick={() => removeModulo(m)} className="hover:text-fluig-danger"><X className="w-3 h-3" /></button>
-                        </span>
-                      ))}
+                  <div>
+                    <label className="block text-xs font-medium text-foreground mb-1">Modulos Contratados</label>
+                    <div className="flex gap-2">
+                      <input type="text" value={moduloInput} onChange={(e) => setModuloInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addModulo() } }} placeholder="ECM, BPM..." className="flex-1 px-3 py-2 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                      <button type="button" onClick={addModulo} className="px-3 py-2 rounded-lg bg-muted text-foreground text-xs font-medium hover:bg-accent transition-colors">+</button>
                     </div>
-                  )}
-                </div>
-              </fieldset>
-
-              {/* Datas da Conta */}
-              <fieldset className="space-y-3">
-                <legend className="text-sm font-semibold text-fluig-title mb-2">Datas</legend>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">Data de Registro <span className="text-fluig-danger">*</span></label>
-                    <input type="date" value={form.data_registro || ""} onChange={(e) => { setForm({ ...form, data_registro: e.target.value }); setFormErrors((p) => { const { data_registro, ...rest } = p; return rest }) }} className={`w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errCls("data_registro")}`} />
-                    {formErrors.data_registro && <p className="text-xs text-fluig-danger mt-1">{formErrors.data_registro}</p>}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">Ultimo Contato</label>
-                    <input type="date" value={form.data_ultimo_contato || ""} onChange={(e) => setForm({ ...form, data_ultimo_contato: e.target.value })} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">Proxima Visita</label>
-                    <input type="date" value={form.data_proxima_visita || ""} onChange={(e) => setForm({ ...form, data_proxima_visita: e.target.value })} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
                   </div>
                 </div>
-              </fieldset>
+                {form.fluig_modulos.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {form.fluig_modulos.map((m) => (
+                      <span key={m} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-accent text-accent-foreground text-xs">
+                        {m}
+                        <button type="button" onClick={() => removeModulo(m)} className="hover:text-fluig-danger"><X className="w-3 h-3" /></button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </FormSection>
 
-              {/* Estagio Opp - only in edit mode */}
+              {/* ── Datas ── */}
+              <FormSection title="Datas" isOpen={openSections.datas} onToggle={() => toggleSection("datas")}>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-foreground mb-1">Registro <span className="text-fluig-danger">*</span></label>
+                    <input type="date" value={form.data_registro || ""} onChange={(e) => { setForm({ ...form, data_registro: e.target.value }); setFormErrors((p) => { const { data_registro, ...rest } = p; return rest }) }} className={`w-full px-2 py-2 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errCls("data_registro")}`} />
+                    {formErrors.data_registro && <p className="text-[11px] text-fluig-danger mt-0.5">{formErrors.data_registro}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-foreground mb-1">Ult. Contato</label>
+                    <input type="date" value={form.data_ultimo_contato || ""} onChange={(e) => setForm({ ...form, data_ultimo_contato: e.target.value })} className="w-full px-2 py-2 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-foreground mb-1">Prox. Visita</label>
+                    <input type="date" value={form.data_proxima_visita || ""} onChange={(e) => setForm({ ...form, data_proxima_visita: e.target.value })} className="w-full px-2 py-2 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                  </div>
+                </div>
+              </FormSection>
+
+              {/* ── Estagio da Oportunidade (edit only) ── */}
               {editingAccount && (() => {
                 const opp = opportunities.find((o) => o.account_id === editingAccount.id && isOppActive(o.estagio))
                 if (!opp) return (
-                  <div className="p-3 rounded-lg bg-muted/50 border border-border">
-                    <p className="text-sm text-muted-foreground">Nenhuma oportunidade ativa vinculada a esta conta.</p>
+                  <div className="px-3 py-2 rounded-lg bg-muted/50 border border-border">
+                    <p className="text-xs text-muted-foreground">Nenhuma oportunidade ativa vinculada a esta conta.</p>
                   </div>
                 )
                 const currentIdx = OPP_STAGE_ORDER.indexOf(opp.estagio)
                 return (
-                  <fieldset className="space-y-3">
-                    <legend className="text-sm font-semibold mb-2" style={{ color: "var(--fluig-title)" }}>Estagio da Oportunidade</legend>
+                  <FormSection title="Estagio da Oportunidade" isOpen={openSections.oportunidade} onToggle={() => toggleSection("oportunidade")} badge={<span className="text-[10px] px-1.5 py-0.5 rounded bg-fluig-primary/15 text-fluig-primary font-medium">{OPP_STAGE_LABELS[opp.estagio]}</span>}>
                     <div>
-                      <label className="block text-sm font-medium text-foreground mb-1">Estagio Atual</label>
+                      <label className="block text-xs font-medium text-foreground mb-1">Estagio Atual</label>
                       <select
                         value={opp.estagio}
-                        onChange={(e) => {
-                          const newStage = e.target.value as OppStage
-                          moveOpportunityStage(opp.id, newStage)
-                        }}
-                        className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        onChange={(e) => moveOpportunityStage(opp.id, e.target.value as OppStage)}
+                        className="w-full px-3 py-2 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                       >
-                        {OPP_STAGE_ORDER.map((stage, idx) => {
-                          const diff = idx - currentIdx
-                          return (
-                            <option key={stage} value={stage}>
-                              {OPP_STAGE_LABELS[stage]}{diff === 0 ? " (atual)" : ""}
-                            </option>
-                          )
-                        })}
+                        {OPP_STAGE_ORDER.map((stage, idx) => (
+                          <option key={stage} value={stage}>
+                            {OPP_STAGE_LABELS[stage]}{idx === currentIdx ? " (atual)" : ""}
+                          </option>
+                        ))}
                       </select>
-                      <p className="text-xs text-muted-foreground mt-1">Selecione o estagio desejado para a oportunidade.</p>
                     </div>
-
-                    {/* MRR Fields */}
-                    <div className="grid grid-cols-2 gap-4 mt-3">
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-sm font-medium text-foreground mb-1">MRR Estimado (R$)</label>
-                        <DebouncedNumberInput
-                          value={opp.mrr_estimado}
-                          onCommit={(v) => updateOpportunity(opp.id, { mrr_estimado: v })}
-                          min={0}
-                          step={100}
-                          className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                          placeholder="0"
-                        />
+                        <label className="block text-xs font-medium text-foreground mb-1">MRR Estimado (R$)</label>
+                        <DebouncedNumberInput value={opp.mrr_estimado} onCommit={(v) => updateOpportunity(opp.id, { mrr_estimado: v })} min={0} step={100} className="w-full px-3 py-2 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="0" />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-foreground mb-1">MRR Fechado (R$)</label>
-                        <DebouncedNumberInput
-                          value={opp.mrr_fechado}
-                          onCommit={(v) => updateOpportunity(opp.id, { mrr_fechado: v })}
-                          min={0}
-                          step={100}
-                          className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                          placeholder="0"
-                        />
+                        <label className="block text-xs font-medium text-foreground mb-1">MRR Fechado (R$)</label>
+                        <DebouncedNumberInput value={opp.mrr_fechado} onCommit={(v) => updateOpportunity(opp.id, { mrr_fechado: v })} min={0} step={100} className="w-full px-3 py-2 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="0" />
                       </div>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">Valores mensais recorrentes da oportunidade.</p>
-
-                    {/* Proximo Passo */}
-                    <div className="mt-3">
-                      <label className="block text-sm font-medium text-foreground mb-1">Proximo Passo</label>
-                      <div className="grid grid-cols-3 gap-3">
-                        <div className="col-span-2">
-                          <input
-                            type="text"
-                            value={opp.proximo_passo}
-                            onChange={(e) => updateOpportunity(opp.id, { proximo_passo: e.target.value })}
-                            placeholder={`Ex: ${getNextStageName(opp) || "Agendar reunião"}`}
-                            className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                          />
-                        </div>
-                        <div>
-                          <input
-                            type="date"
-                            value={opp.data_proximo_passo}
-                            onChange={(e) => updateOpportunity(opp.id, { data_proximo_passo: e.target.value })}
-                            className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                          />
-                        </div>
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1">Proximo Passo</label>
+                      <div className="grid grid-cols-[1fr_140px] gap-2">
+                        <input type="text" value={opp.proximo_passo} onChange={(e) => updateOpportunity(opp.id, { proximo_passo: e.target.value })} placeholder={`Ex: ${getNextStageName(opp) || "Agendar reunião"}`} className="w-full px-3 py-2 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                        <input type="date" value={opp.data_proximo_passo} onChange={(e) => updateOpportunity(opp.id, { data_proximo_passo: e.target.value })} className="w-full px-2 py-2 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
                       </div>
                     </div>
-
-                    {/* Datas da Oportunidade */}
-                    <div className="grid grid-cols-2 gap-3 mt-3">
+                    <div className="grid grid-cols-4 gap-2">
                       <div>
-                        <label className="block text-sm font-medium text-foreground mb-1">Data Contato</label>
-                        <input type="date" value={opp.data_contato} onChange={(e) => updateOpportunity(opp.id, { data_contato: e.target.value })} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                        <label className="block text-[11px] font-medium text-foreground mb-1">Contato</label>
+                        <input type="date" value={opp.data_contato} onChange={(e) => updateOpportunity(opp.id, { data_contato: e.target.value })} className="w-full px-1.5 py-2 rounded-lg border border-border bg-card text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-ring" />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-foreground mb-1">Data Visita</label>
-                        <input type="date" value={opp.data_visita} onChange={(e) => updateOpportunity(opp.id, { data_visita: e.target.value })} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                        <label className="block text-[11px] font-medium text-foreground mb-1">Visita</label>
+                        <input type="date" value={opp.data_visita} onChange={(e) => updateOpportunity(opp.id, { data_visita: e.target.value })} className="w-full px-1.5 py-2 rounded-lg border border-border bg-card text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-ring" />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-foreground mb-1">Data Proposta</label>
-                        <input type="date" value={opp.data_proposta} onChange={(e) => updateOpportunity(opp.id, { data_proposta: e.target.value })} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                        <label className="block text-[11px] font-medium text-foreground mb-1">Proposta</label>
+                        <input type="date" value={opp.data_proposta} onChange={(e) => updateOpportunity(opp.id, { data_proposta: e.target.value })} className="w-full px-1.5 py-2 rounded-lg border border-border bg-card text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-ring" />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-foreground mb-1">Data Fechamento</label>
-                        <input type="date" value={opp.data_fechamento} onChange={(e) => updateOpportunity(opp.id, { data_fechamento: e.target.value })} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                        <label className="block text-[11px] font-medium text-foreground mb-1">Fechamento</label>
+                        <input type="date" value={opp.data_fechamento} onChange={(e) => updateOpportunity(opp.id, { data_fechamento: e.target.value })} className="w-full px-1.5 py-2 rounded-lg border border-border bg-card text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-ring" />
                       </div>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">Datas-chave do ciclo de venda da oportunidade.</p>
-                  </fieldset>
+                  </FormSection>
                 )
               })()}
 
-              {/* Scoring - 5 sliders */}
-              <fieldset className="space-y-3">
-                <legend className="text-sm font-semibold text-fluig-title mb-2">
-                  Scoring — Total: {calcFormTotal}/25 | Tier {formTier} | Onda {formOnda}
-                </legend>
-                <div className="flex items-center gap-2 mb-1">
-                  <TierBadge tier={formTier} />
-                  <span className="text-xs text-muted-foreground">Onda {formOnda}</span>
-                </div>
+              {/* ── Scoring ── */}
+              <FormSection
+                title="Scoring"
+                isOpen={openSections.scoring}
+                onToggle={() => toggleSection("scoring")}
+                badge={<div className="flex items-center gap-1.5"><TierBadge tier={formTier} /><span className="text-[10px] text-muted-foreground">{calcFormTotal}/25 · Onda {formOnda}</span></div>}
+              >
                 {SCORE_DIMENSIONS.map((dim) => {
                   const val = form[dim.key]
                   return (
                     <div key={dim.key}>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="text-sm font-medium text-foreground">{dim.label}</label>
-                        <span className="text-sm font-bold text-foreground">{val}/5 <span className="text-xs text-muted-foreground font-normal">({SCORE_LABELS[dim.key][val]})</span></span>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <label className="text-xs font-medium text-foreground">{dim.label}</label>
+                        <span className="text-xs font-bold text-foreground">{val}/5 <span className="text-[10px] text-muted-foreground font-normal">({SCORE_LABELS[dim.key][val]})</span></span>
                       </div>
-                      <input
-                        type="range" min={0} max={5} value={val}
-                        onChange={(e) => setForm({ ...form, [dim.key]: Number(e.target.value) })}
-                        className="w-full accent-[var(--fluig-primary)]"
-                      />
+                      <input type="range" min={0} max={5} value={val} onChange={(e) => setForm({ ...form, [dim.key]: Number(e.target.value) })} className="w-full accent-[var(--fluig-primary)] h-1.5" />
                     </div>
                   )
                 })}
-              </fieldset>
+              </FormSection>
 
-              {/* Observations */}
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Observacoes</label>
-                <textarea value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} rows={3} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none" />
-              </div>
+              {/* ── Observacoes ── */}
+              <FormSection title="Observacoes" isOpen={openSections.obs} onToggle={() => toggleSection("obs")}>
+                <textarea value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} rows={3} placeholder="Anotacoes gerais sobre a conta..." className="w-full px-3 py-2 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none" />
+              </FormSection>
 
-              <button type="submit" disabled={creatingOpp} className="w-full mt-2 px-4 py-2.5 rounded-lg bg-fluig-primary text-primary-foreground font-medium text-sm hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed">
+              <button type="submit" disabled={creatingOpp} className="w-full mt-1 px-4 py-2.5 rounded-lg bg-fluig-primary text-primary-foreground font-medium text-sm hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed">
                 {editingAccount ? "Salvar Alteracoes" : creatingOpp ? "Criando Conta e Oportunidade..." : "Criar Conta + Oportunidade"}
               </button>
             </form>
