@@ -95,7 +95,7 @@ const emptyForm = (): Omit<Account, "id" | "score_total" | "tier" | "onda" | "cr
   data_registro: new Date().toISOString().slice(0, 10),
   data_proxima_visita: "",
   data_ultimo_contato: "",
-  estagio_inicial: "contato" as OppStage,
+  estagio_inicial: "selecionado" as OppStage,
 })
 
 export function ContasModule() {
@@ -133,6 +133,7 @@ export function ContasModule() {
       errors.contato_whatsapp = "Informe pelo menos email ou WhatsApp"
     }
     if (!form.data_registro) errors.data_registro = "Data de registro é obrigatória"
+    if (!editingAccount && !form.estagio_inicial) errors.estagio_inicial = "Selecione o estágio inicial"
     return errors
   }
 
@@ -212,7 +213,7 @@ export function ContasModule() {
           // Criar oportunidade automaticamente
           addOpportunity({
             account_id: newAccount.id,
-            estagio: estagio_inicial || "contato",
+            estagio: estagio_inicial || "selecionado",
             mrr_estimado: 0,
             mrr_fechado: 0,
             pacote_works: "Essencial",
@@ -568,12 +569,13 @@ export function ContasModule() {
                 <fieldset className="space-y-3">
                   <legend className="text-sm font-semibold text-fluig-title mb-2">Pipeline Inicial</legend>
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">Estagio Inicial da Oportunidade</label>
-                    <select value={form.estagio_inicial || "contato"} onChange={(e) => setForm({ ...form, estagio_inicial: e.target.value as OppStage })} className="w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+                    <label className="block text-sm font-medium text-foreground mb-1">Estagio Inicial da Oportunidade <span className="text-fluig-danger">*</span></label>
+                    <select required value={form.estagio_inicial || "selecionado"} onChange={(e) => { setForm({ ...form, estagio_inicial: e.target.value as OppStage }); setFormErrors((p) => { const { estagio_inicial, ...rest } = p; return rest }) }} className={`w-full px-3 py-2.5 rounded-lg border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errCls("estagio_inicial")}`}>
                       {OPP_STAGE_ORDER.map((stage) => (
                         <option key={stage} value={stage}>{OPP_STAGE_LABELS[stage]}</option>
                       ))}
                     </select>
+                    {formErrors.estagio_inicial && <p className="text-xs text-fluig-danger mt-1">{formErrors.estagio_inicial}</p>}
                     <p className="text-xs text-muted-foreground mt-1">Ao criar esta conta, uma oportunidade sera criada automaticamente neste estagio.</p>
                   </div>
                 </fieldset>
