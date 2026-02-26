@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, lazy, Suspense, useTransition } from "react"
 import { createPortal } from "react-dom"
 import { BookOpen, X, FileText, Code2 } from "lucide-react"
-import { ManualGuia } from "./manual-guia"
-import { ManualTecnica } from "./manual-tecnica"
+
+const ManualGuia = lazy(() => import("./manual-guia").then(m => ({ default: m.ManualGuia })))
+const ManualTecnica = lazy(() => import("./manual-tecnica").then(m => ({ default: m.ManualTecnica })))
 
 type Tab = "usuario" | "tecnica"
 
@@ -12,6 +13,21 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "usuario", label: "Guia do Usuário", icon: <FileText className="w-4 h-4" /> },
   { id: "tecnica", label: "Doc Técnica", icon: <Code2 className="w-4 h-4" /> },
 ]
+
+function Spinner() {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 200 }}>
+      <div style={{
+        width: 24, height: 24,
+        border: "2px solid #0077b6",
+        borderTopColor: "transparent",
+        borderRadius: "50%",
+        animation: "manual-spin 0.8s linear infinite",
+      }} />
+      <style dangerouslySetInnerHTML={{ __html: "@keyframes manual-spin { to { transform: rotate(360deg) } }" }} />
+    </div>
+  )
+}
 
 function ManualPortal({ onClose, activeTab, onTabChange }: {
   onClose: () => void
@@ -23,6 +39,8 @@ function ManualPortal({ onClose, activeTab, onTabChange }: {
     window.addEventListener("keydown", h)
     return () => window.removeEventListener("keydown", h)
   }, [onClose])
+
+  const [, startTransition] = useTransition()
 
   return createPortal(
     <div style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex" }}>
@@ -72,7 +90,7 @@ function ManualPortal({ onClose, activeTab, onTabChange }: {
           {TABS.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => onTabChange(tab.id)}
+              onClick={() => startTransition(() => onTabChange(tab.id))}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -96,7 +114,9 @@ function ManualPortal({ onClose, activeTab, onTabChange }: {
 
         {/* Content */}
         <div style={{ flex: 1, overflowY: "auto", padding: "24px 32px" }}>
-          {activeTab === "usuario" ? <ManualGuia /> : <ManualTecnica />}
+          <Suspense fallback={<Spinner />}>
+            {activeTab === "usuario" ? <ManualGuia /> : <ManualTecnica />}
+          </Suspense>
         </div>
       </div>
     </div>,
