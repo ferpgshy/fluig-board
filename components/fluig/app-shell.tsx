@@ -20,6 +20,7 @@ import {
   ChevronDown,
   Orbit,
 } from "lucide-react"
+import { ManualSheet } from "@/components/fluig/manual-sheet"
 
 export type ModuleId = "dashboard" | "contas" | "pipeline" | "roteiro" | "relatorio"
 
@@ -137,7 +138,8 @@ export function AppShell({ activeModule, onModuleChange, children }: AppShellPro
               ))}
             </nav>
 
-            {/* User menu */}
+            {/* User menu + Manual */}
+            <div className="flex items-center gap-2">
             <div className="relative" ref={userMenuRef}>
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
@@ -198,6 +200,12 @@ export function AppShell({ activeModule, onModuleChange, children }: AppShellPro
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Manual button — far right */}
+            <div className="border-l border-border/50 pl-2">
+              <ManualSheet />
+            </div>
             </div>
           </div>
         </div>
