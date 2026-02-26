@@ -17,9 +17,8 @@ export function useRealtimeSync() {
     if (!initialized) return
 
     const supabase = createClient()
-    const store = useStore.getState
 
-    // Helper to get current state and set new state
+    // Helper to set new state
     const setState = useStore.setState
 
     const channel = supabase
@@ -31,10 +30,10 @@ export function useRealtimeSync() {
         { event: "INSERT", schema: "public", table: "accounts" },
         (payload) => {
           const newAccount = payload.new as Account
-          const exists = store().accounts.some((a) => a.id === newAccount.id)
-          if (!exists) {
-            setState((s) => ({ accounts: [newAccount, ...s.accounts] }))
-          }
+          setState((s) => {
+            if (s.accounts.some((a) => a.id === newAccount.id)) return s
+            return { accounts: [newAccount, ...s.accounts] }
+          })
         }
       )
       .on(
@@ -64,10 +63,10 @@ export function useRealtimeSync() {
         { event: "INSERT", schema: "public", table: "opportunities" },
         (payload) => {
           const newOpp = payload.new as Opportunity
-          const exists = store().opportunities.some((o) => o.id === newOpp.id)
-          if (!exists) {
-            setState((s) => ({ opportunities: [newOpp, ...s.opportunities] }))
-          }
+          setState((s) => {
+            if (s.opportunities.some((o) => o.id === newOpp.id)) return s
+            return { opportunities: [newOpp, ...s.opportunities] }
+          })
         }
       )
       .on(
@@ -97,10 +96,10 @@ export function useRealtimeSync() {
         { event: "INSERT", schema: "public", table: "visits" },
         (payload) => {
           const newVisit = payload.new as Visit
-          const exists = store().visits.some((v) => v.id === newVisit.id)
-          if (!exists) {
-            setState((s) => ({ visits: [newVisit, ...s.visits] }))
-          }
+          setState((s) => {
+            if (s.visits.some((v) => v.id === newVisit.id)) return s
+            return { visits: [newVisit, ...s.visits] }
+          })
         }
       )
       .on(
@@ -130,10 +129,10 @@ export function useRealtimeSync() {
         { event: "INSERT", schema: "public", table: "reports" },
         (payload) => {
           const newReport = payload.new as ReportDraft
-          const exists = store().reports.some((r) => r.id === newReport.id)
-          if (!exists) {
-            setState((s) => ({ reports: [newReport, ...s.reports] }))
-          }
+          setState((s) => {
+            if (s.reports.some((r) => r.id === newReport.id)) return s
+            return { reports: [newReport, ...s.reports] }
+          })
         }
       )
       .on(
