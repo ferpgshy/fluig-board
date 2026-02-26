@@ -162,6 +162,12 @@ export function ManualGuia() {
           <tr><td className={S.td}>Cargo</td><td className={S.td}></td><td className={S.td}>Cargo (ex: CTO, Diretor)</td></tr>
           <tr><td className={S.td}>Email</td><td className={S.td}>⚠️</td><td className={S.td}>Pelo menos email ou WhatsApp</td></tr>
           <tr><td className={S.td}>WhatsApp</td><td className={S.td}>⚠️</td><td className={S.td}>Pelo menos email ou WhatsApp</td></tr>
+          <tr><td className={S.td}>CEP</td><td className={S.td}></td><td className={S.td}>Preenche automaticamente Rua, Bairro, Cidade e UF via ViaCEP</td></tr>
+          <tr><td className={S.td}>Rua</td><td className={S.td}></td><td className={S.td}>Logradouro (auto-preenchido pelo CEP)</td></tr>
+          <tr><td className={S.td}>Nº</td><td className={S.td}></td><td className={S.td}>Número do endereço</td></tr>
+          <tr><td className={S.td}>Bairro</td><td className={S.td}></td><td className={S.td}>Bairro (auto-preenchido pelo CEP)</td></tr>
+          <tr><td className={S.td}>Cidade</td><td className={S.td}></td><td className={S.td}>Cidade (auto-preenchido pelo CEP)</td></tr>
+          <tr><td className={S.td}>UF</td><td className={S.td}></td><td className={S.td}>Estado — select com as 27 UFs do Brasil (auto-preenchido pelo CEP)</td></tr>
         </tbody>
       </table>
 

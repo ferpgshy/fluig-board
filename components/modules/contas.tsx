@@ -81,6 +81,11 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 const SEGMENTOS: Segmento[] = ["Agroindústria", "Construção e Projetos", "Distribuição", "Educação", "Logística", "Manufatura", "Saúde", "Serviços", "Setor Público", "Varejo"]
 const PORTES: Porte[] = ["PME", "Mid-Market", "Enterprise"]
 
+const UF_OPTIONS = [
+  "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG",
+  "PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO",
+] as const
+
 const emptyForm = (): Omit<Account, "id" | "score_total" | "tier" | "onda" | "criado_em" | "atualizado_em"> & { estagio_inicial?: OppStage } => ({
   nome: "",
   segmento: "Serviços" as Segmento,
@@ -91,6 +96,12 @@ const emptyForm = (): Omit<Account, "id" | "score_total" | "tier" | "onda" | "cr
   contato_whatsapp: "",
   esn_nome: "",
   esn_email: "",
+  endereco_cep: "",
+  endereco_rua: "",
+  endereco_numero: "",
+  endereco_bairro: "",
+  endereco_cidade: "",
+  endereco_uf: "",
   fluig_versao: "",
   fluig_modulos: [],
   score_potencial: 3,
@@ -128,6 +139,27 @@ export function ContasModule() {
   const [form, setForm] = useState(emptyForm())
   const [creatingOpp, setCreatingOpp] = useState(false)
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+  const [cepLoading, setCepLoading] = useState(false)
+
+  const buscarCep = useCallback(async (cep: string) => {
+    const clean = cep.replace(/\D/g, "")
+    if (clean.length !== 8) return
+    setCepLoading(true)
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${clean}/json/`)
+      const data = await res.json()
+      if (!data.erro) {
+        setForm((prev) => ({
+          ...prev,
+          endereco_rua: data.logradouro || prev.endereco_rua,
+          endereco_bairro: data.bairro || prev.endereco_bairro,
+          endereco_cidade: data.localidade || prev.endereco_cidade,
+          endereco_uf: data.uf || prev.endereco_uf,
+        }))
+      }
+    } catch { /* silently ignore */ }
+    setCepLoading(false)
+  }, [])
 
 
 
@@ -188,6 +220,12 @@ export function ContasModule() {
       contato_whatsapp: account.contato_whatsapp,
       esn_nome: account.esn_nome || "",
       esn_email: account.esn_email || "",
+      endereco_cep: account.endereco_cep || "",
+      endereco_rua: account.endereco_rua || "",
+      endereco_numero: account.endereco_numero || "",
+      endereco_bairro: account.endereco_bairro || "",
+      endereco_cidade: account.endereco_cidade || "",
+      endereco_uf: account.endereco_uf || "",
       fluig_versao: account.fluig_versao,
       fluig_modulos: [...account.fluig_modulos],
       score_potencial: account.score_potencial,
@@ -456,6 +494,7 @@ export function ContasModule() {
               detailAccount.contato_nome ? { label: "Contato", value: `${detailAccount.contato_nome}${detailAccount.contato_cargo ? ` (${detailAccount.contato_cargo})` : ""}` } : null,
               detailAccount.contato_email ? { label: "Email", value: detailAccount.contato_email } : null,
               detailAccount.contato_whatsapp ? { label: "WhatsApp", value: detailAccount.contato_whatsapp } : null,
+              detailAccount.endereco_cep ? { label: "Endereço", value: [detailAccount.endereco_rua, detailAccount.endereco_numero, detailAccount.endereco_bairro, detailAccount.endereco_cidade, detailAccount.endereco_uf].filter(Boolean).join(", ") + ` — CEP ${detailAccount.endereco_cep}` } : null,
               detailAccount.fluig_versao ? { label: "Fluig Versao", value: detailAccount.fluig_versao } : null,
               detailAccount.fluig_modulos.length > 0 ? { label: "Modulos", value: detailAccount.fluig_modulos.join(", ") } : null,
               { label: "Score / Tier / Onda", value: `${detailAccount.score_total}/25 | Tier ${detailAccount.tier} | Onda ${detailAccount.onda}` },
@@ -614,6 +653,52 @@ export function ContasModule() {
                     <div>
                       <label className="block text-xs font-medium text-foreground mb-1">WhatsApp</label>
                       <input type="text" value={form.contato_whatsapp} onChange={(e) => { setForm({ ...form, contato_whatsapp: e.target.value }); setFormErrors((p) => { const { contato_email, contato_whatsapp, ...rest } = p; return rest }) }} placeholder="(11) 99999-0000" className={`w-full px-3 py-2 rounded-md border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring ${errCls("contato_whatsapp")}`} />
+                    </div>
+                  </div>
+
+                  {/* Endereço */}
+                  <div className="grid grid-cols-[120px_1fr_80px] gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1">CEP</label>
+                      <input
+                        type="text"
+                        value={form.endereco_cep}
+                        onChange={(e) => {
+                          let v = e.target.value.replace(/\D/g, "").slice(0, 8)
+                          if (v.length > 5) v = v.slice(0, 5) + "-" + v.slice(5)
+                          setForm({ ...form, endereco_cep: v })
+                        }}
+                        onBlur={() => buscarCep(form.endereco_cep)}
+                        placeholder="00000-000"
+                        maxLength={9}
+                        className="w-full px-2.5 py-2 rounded-md border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                      />
+                      {cepLoading && <p className="text-[10px] text-muted-foreground mt-0.5">Buscando...</p>}
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1">Rua</label>
+                      <input type="text" value={form.endereco_rua} onChange={(e) => setForm({ ...form, endereco_rua: e.target.value })} placeholder="Rua / Av." className="w-full px-3 py-2 rounded-md border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1">Nº</label>
+                      <input type="text" value={form.endereco_numero} onChange={(e) => setForm({ ...form, endereco_numero: e.target.value })} placeholder="123" className="w-full px-2.5 py-2 rounded-md border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-[1fr_1fr_80px] gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1">Bairro</label>
+                      <input type="text" value={form.endereco_bairro} onChange={(e) => setForm({ ...form, endereco_bairro: e.target.value })} placeholder="Centro" className="w-full px-3 py-2 rounded-md border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1">Cidade</label>
+                      <input type="text" value={form.endereco_cidade} onChange={(e) => setForm({ ...form, endereco_cidade: e.target.value })} placeholder="São Paulo" className="w-full px-3 py-2 rounded-md border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1">UF</label>
+                      <select value={form.endereco_uf} onChange={(e) => setForm({ ...form, endereco_uf: e.target.value })} className="w-full px-2 py-2 rounded-md border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+                        <option value="">—</option>
+                        {UF_OPTIONS.map((uf) => <option key={uf} value={uf}>{uf}</option>)}
+                      </select>
                     </div>
                   </div>
                 </div>

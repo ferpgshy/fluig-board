@@ -60,6 +60,12 @@ export interface Account {
   contato_whatsapp: string
   esn_nome: string
   esn_email: string
+  endereco_cep: string
+  endereco_rua: string
+  endereco_numero: string
+  endereco_bairro: string
+  endereco_cidade: string
+  endereco_uf: string
   fluig_versao: string
   fluig_modulos: string[]
   score_potencial: number // 0-5
