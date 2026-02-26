@@ -6,7 +6,6 @@ import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { useInitStore } from "@/hooks/use-init-store"
 import { useRealtimeSync } from "@/hooks/use-realtime-sync"
-import { useSessionKeepAlive } from "@/hooks/use-session-keep-alive"
 import {
   Building2,
   LayoutDashboard,
@@ -53,7 +52,6 @@ export function AppShell({ activeModule, onModuleChange, children }: AppShellPro
 
   useInitStore()
   useRealtimeSync()
-  useSessionKeepAlive()
 
   useEffect(() => {
     async function loadProfile() {
