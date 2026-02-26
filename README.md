@@ -51,7 +51,7 @@
 | Recurso | Descrição |
 |---------|-----------|
 | CRUD completo | Cadastro de contas com dados da empresa, contato e módulos Fluig |
-| Scoring 5D | Dor de Negócio, Engajamento, Fit Técnico, Timing, Budget (sliders 0-5) |
+| Scoring 5D | Potencial de Expansão, Maturidade de Uso, Intensidade de Dores, Risco de Churn, Acesso ao Sponsor (sliders 0-5) |
 | Classificação automática | Tier (A/B/C) e Onda (1/2/3) calculados via score |
 | Filtros avançados | Busca textual, Tier, Onda, Responsável |
 | Exportação CSV | Download da base filtrada |
@@ -352,10 +352,11 @@ O projeto utiliza **Supabase** (PostgreSQL gerenciado) com **Row Level Security 
 | `nome` | `text` | Nome da empresa/conta |
 | `segmento` | `text` | Segmento de mercado |
 | `porte` | `text` | Porte da empresa |
-| `contato_nome`, `contato_email`, `contato_telefone` | `text` | Dados do contato |
+| `contato_nome`, `contato_email`, `contato_whatsapp` | `text` | Dados do contato |
+| `esn_nome`, `esn_email` | `text` | Dados do ESN |
 | `fluig_versao` | `text` | Versão do Fluig |
 | `fluig_modulos` | `text[]` | Módulos Fluig em uso |
-| `score_dor`, `score_engajamento`, `score_fit`, `score_timing`, `score_budget` | `integer` (0-5) | Scores por dimensão |
+| `score_potencial`, `score_maturidade`, `score_dor`, `score_risco_churn`, `score_acesso` | `integer` (0-5) | Scores por dimensão |
 | `score_total` | `integer` | Score total calculado |
 | `tier` | `text` | A, B ou C (calculado) |
 | `onda` | `integer` | 1, 2 ou 3 (calculado) |
@@ -608,12 +609,12 @@ O Fluig Board utiliza um design system próprio baseado no **shadcn/ui** com tok
 ### Scoring & Classificação
 
 ```
-Score Total = soma(score_dor + score_engajamento + score_fit + score_timing + score_budget)
+Score Total = soma(score_potencial + score_maturidade + score_dor + score_risco_churn + score_acesso)
              Cada dimensão: 0 a 5 | Total máximo: 25
 
-Tier A = Score ≥ 18    → Prioridade máxima
-Tier B = Score ≥ 10    → Prioridade média
-Tier C = Score < 10    → Prioridade baixa
+Tier A = Score ≥ 20    → Prioridade máxima
+Tier B = Score ≥ 12    → Prioridade média
+Tier C = Score < 12    → Prioridade baixa
 
 Onda 1 = Tier A        → Ação imediata
 Onda 2 = Tier B        → Próximo ciclo
