@@ -89,6 +89,8 @@ const emptyForm = (): Omit<Account, "id" | "score_total" | "tier" | "onda" | "cr
   contato_cargo: "",
   contato_email: "",
   contato_whatsapp: "",
+  esn_nome: "",
+  esn_email: "",
   fluig_versao: "",
   fluig_modulos: [],
   score_potencial: 3,
@@ -184,6 +186,8 @@ export function ContasModule() {
       contato_cargo: account.contato_cargo,
       contato_email: account.contato_email,
       contato_whatsapp: account.contato_whatsapp,
+      esn_nome: account.esn_nome || "",
+      esn_email: account.esn_email || "",
       fluig_versao: account.fluig_versao,
       fluig_modulos: [...account.fluig_modulos],
       score_potencial: account.score_potencial,
@@ -555,7 +559,7 @@ export function ContasModule() {
 
                 {/* ── COL LEFT: Empresa ── */}
                 <div className="space-y-3 rounded-lg border border-border p-4">
-                  <SectionTitle>Dados da Empresa</SectionTitle>
+                  <SectionTitle>Dados do Cliente</SectionTitle>
                   <div className="grid grid-cols-[1fr_110px] gap-3">
                     <div>
                       <label className="block text-xs font-medium text-foreground mb-1">Nome <span className="text-fluig-danger">*</span></label>
@@ -575,11 +579,21 @@ export function ContasModule() {
                       {SEGMENTOS.map((s) => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1">Nome do ESN</label>
+                      <input type="text" value={form.esn_nome} onChange={(e) => setForm({ ...form, esn_nome: e.target.value })} placeholder="Nome do ESN" className="w-full px-3 py-2 rounded-md border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1">E-mail do ESN</label>
+                      <input type="email" value={form.esn_email} onChange={(e) => setForm({ ...form, esn_email: e.target.value })} placeholder="esn@empresa.com" className="w-full px-3 py-2 rounded-md border border-border bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                    </div>
+                  </div>
                 </div>
 
                 {/* ── COL RIGHT: Contato ── */}
                 <div className="space-y-3 rounded-lg border border-border p-4">
-                  <SectionTitle>Contato / Sponsor</SectionTitle>
+                  <SectionTitle>Contato do Cliente / Sponsor</SectionTitle>
                   <div className="grid grid-cols-[1fr_100px] gap-3">
                     <div>
                       <label className="block text-xs font-medium text-foreground mb-1">Nome <span className="text-fluig-danger">*</span></label>

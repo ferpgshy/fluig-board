@@ -58,6 +58,8 @@ export interface Account {
   contato_cargo: string
   contato_email: string
   contato_whatsapp: string
+  esn_nome: string
+  esn_email: string
   fluig_versao: string
   fluig_modulos: string[]
   score_potencial: number // 0-5
