@@ -168,11 +168,7 @@ export function ContasModule() {
     if (!form.nome.trim()) errors.nome = "Nome da empresa é obrigatório"
     if (!form.segmento) errors.segmento = "Selecione um segmento"
     if (!form.porte) errors.porte = "Selecione um porte"
-    if (!form.contato_nome.trim()) errors.contato_nome = "Nome do contato é obrigatório"
-    if (!form.contato_email.trim() && !form.contato_whatsapp.trim()) {
-      errors.contato_email = "Informe pelo menos email ou WhatsApp"
-      errors.contato_whatsapp = "Informe pelo menos email ou WhatsApp"
-    }
+
     if (!form.data_registro) errors.data_registro = "Data de registro é obrigatória"
     if (!editingAccount && !form.estagio_inicial) errors.estagio_inicial = "Selecione o estágio inicial"
     return errors
